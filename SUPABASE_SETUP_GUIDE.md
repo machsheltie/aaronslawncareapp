@@ -20,8 +20,8 @@ Once project is created:
 2. Copy these values to your `.env` file:
 
 ```env
-VITE_SUPABASE_URL=https://xxxxx.supabase.co
-VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+VITE_SUPABASE_URL=YOUR_SUPABASE_URL
+VITE_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
 ```
 
 ⚠️ **NEVER commit service_role_key to git!** (Only use in Supabase Edge Functions)
