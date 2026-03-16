@@ -35,3 +35,6 @@ workbox-*.js
 
 # mcp
 .mcp.json
+
+# Supabase temp files
+supabase/.temp/
