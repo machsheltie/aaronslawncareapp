@@ -10,6 +10,8 @@ import jobsIcon from '@/assets/icons/jobs.png'
 import customersIcon from '@/assets/icons/customers.png'
 import invoicesIcon from '@/assets/icons/invoices.png'
 import dashboardIcon from '@/assets/icons/dashboard.png'
+import quoteIcon from '@/assets/icons/quote.png'
+import LOGO_SRC from '@/assets/logo-base64'
 
 export function AppLayout() {
   const { user, signOut } = useAuth()
@@ -49,17 +51,40 @@ export function AppLayout() {
       )}
 
       {/* Top Nav */}
-      <header className="bg-brand-green text-white shadow-md">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-          <h1 className="text-lg font-bold">Aaron's Lawn Care</h1>
+      <header
+        className="text-white"
+        style={{
+          background: '#1B5E20',
+          padding: '16px 24px',
+          boxShadow: '0 2px 12px rgba(0,0,0,0.15)',
+        }}
+      >
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <img
+              src={LOGO_SRC}
+              alt="Aaron's Lawn Care"
+              className="rounded-lg object-contain"
+              style={{ width: 36, height: 36 }}
+            />
+            <div>
+              <div style={{ fontSize: 16, fontWeight: 800, letterSpacing: 1, color: '#ffffff' }}>
+                AARON'S LAWN CARE
+              </div>
+              <div style={{ color: '#81C784', fontSize: 11, letterSpacing: 2 }}>
+                BUSINESS MANAGER
+              </div>
+            </div>
+          </div>
 
           <div className="flex items-center gap-4">
-            <span className="text-sm text-green-200 hidden sm:inline">
+            <span className="text-sm hidden sm:inline" style={{ color: '#81C784' }}>
               {user?.email}
             </span>
             <button
               onClick={signOut}
               className="text-sm bg-white/10 hover:bg-white/20 px-3 py-1 rounded transition-colors"
+              style={{ borderColor: 'rgba(255,255,255,0.3)', border: '1px solid rgba(255,255,255,0.3)' }}
             >
               Sign Out
             </button>
@@ -74,6 +99,7 @@ export function AppLayout() {
           <NavItem to="/jobs" label="Jobs" icon={jobsIcon} />
           <NavItem to="/customers" label="Customers" icon={customersIcon} />
           <NavItem to="/invoices" label="Invoices" icon={invoicesIcon} />
+          <NavItem to="/quotes" label="Quotes" icon={quoteIcon} />
           <NavItem to="/dashboard" label="Dashboard" icon={dashboardIcon} />
         </div>
       </nav>

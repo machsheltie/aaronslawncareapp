@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import { compressImage } from '@/lib/compressImage'
 import type { Database } from '@/types/supabase'
 
 type Photo = Database['public']['Tables']['photos']['Row']
@@ -43,14 +44,17 @@ export function useUploadPhoto() {
       file: File
       photoType: PhotoType
     }) => {
+      // Compress image before upload
+      const compressed = await compressImage(file)
+
       // Generate unique storage path
-      const ext = file.name.split('.').pop() || 'jpg'
+      const ext = compressed.name.split('.').pop() || 'jpg'
       const path = `${jobId}/${Date.now()}-${photoType}.${ext}`
 
       // Upload to Supabase Storage
       const { error: uploadError } = await supabase.storage
         .from('job-photos')
-        .upload(path, file, {
+        .upload(path, compressed, {
           cacheControl: '3600',
           upsert: false,
         })
@@ -63,8 +67,8 @@ export function useUploadPhoto() {
           job_id: jobId,
           photo_type: photoType,
           storage_path: path,
-          file_size: file.size,
-          mime_type: file.type,
+          file_size: compressed.size,
+          mime_type: compressed.type,
         })
         .select()
         .single()

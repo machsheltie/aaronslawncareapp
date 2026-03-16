@@ -2,6 +2,40 @@ import { useState } from 'react'
 import { useReportStats } from '@/hooks/useReports'
 import { SERVICE_TYPES } from '@/hooks/useJobs'
 
+function exportCsv(stats: { totalRevenue: number; outstandingAmount: number; jobsCompleted: number; jobsScheduled: number; activeCustomers: number; revenueByMonth: { month: string; total: number }[]; jobsByService: { service: string; count: number }[] }, from: string, to: string) {
+  const lines: string[] = []
+  lines.push(`Aaron's Lawn Care - Report (${from} to ${to})`)
+  lines.push('')
+  lines.push('Summary')
+  lines.push(`Revenue,$${stats.totalRevenue.toFixed(2)}`)
+  lines.push(`Outstanding,$${stats.outstandingAmount.toFixed(2)}`)
+  lines.push(`Jobs Completed,${stats.jobsCompleted}`)
+  lines.push(`Jobs Scheduled,${stats.jobsScheduled}`)
+  lines.push(`Active Customers,${stats.activeCustomers}`)
+  lines.push('')
+  lines.push('Revenue by Month')
+  lines.push('Month,Revenue')
+  stats.revenueByMonth.forEach(r => {
+    const label = new Date(r.month + '-01T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'short' })
+    lines.push(`${label},$${r.total.toFixed(2)}`)
+  })
+  lines.push('')
+  lines.push('Jobs by Service')
+  lines.push('Service,Count')
+  stats.jobsByService.forEach(s => {
+    const label = SERVICE_TYPES.find(t => t.value === s.service)?.label ?? s.service
+    lines.push(`${label},${s.count}`)
+  })
+
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `aarons-lawn-care-report-${from}-to-${to}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 export default function Reports() {
   const now = new Date()
   const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1)
@@ -13,7 +47,17 @@ export default function Reports() {
   return (
     <div>
       <h2 className="text-2xl font-bold text-gray-800 mb-1">Reports</h2>
-      <p className="text-sm text-gray-500 mb-6">Business performance overview</p>
+      <div className="flex items-center justify-between mb-1">
+        <p className="text-sm text-gray-500">Business performance overview</p>
+        {stats && (
+          <button
+            onClick={() => exportCsv(stats, from, to)}
+            className="bg-brand-green text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-brand-accent transition-colors"
+          >
+            Export CSV
+          </button>
+        )}
+      </div>
 
       {/* Date Range */}
       <div className="flex items-center gap-3 mb-6">

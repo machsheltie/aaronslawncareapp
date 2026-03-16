@@ -3,6 +3,7 @@ import { Link, useParams, useNavigate } from 'react-router-dom'
 import { useInvoice, useUpdateInvoiceStatus, useDeleteInvoice, PAYMENT_STATUS_OPTIONS } from '@/hooks/useInvoices'
 import PaymentForm from '@/components/payments/PaymentForm'
 import { useQueryClient } from '@tanstack/react-query'
+import { downloadInvoicePdf } from '@/lib/generateInvoicePdf'
 
 export default function InvoiceDetail() {
   const { id } = useParams()
@@ -76,6 +77,12 @@ export default function InvoiceDetail() {
               Mark Paid
             </button>
           )}
+          <button
+            onClick={() => downloadInvoicePdf(invoice)}
+            className="bg-brand-green text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-brand-accent transition-colors"
+          >
+            Download PDF
+          </button>
           <button
             onClick={handleDelete}
             className="border border-red-300 text-red-600 px-4 py-2 rounded-md text-sm font-medium hover:bg-red-50 transition-colors"

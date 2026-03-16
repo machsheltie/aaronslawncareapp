@@ -16,6 +16,7 @@ import InvoiceForm from '@/pages/InvoiceForm'
 import InvoiceDetail from '@/pages/InvoiceDetail'
 import Reports from '@/pages/Reports'
 import MyDay from '@/pages/MyDay'
+import Quotes from '@/pages/Quotes'
 
 function App() {
   return (
@@ -47,6 +48,7 @@ function App() {
             <Route path="/invoices" element={<Invoices />} />
             <Route path="/invoices/new" element={<InvoiceForm />} />
             <Route path="/invoices/:id" element={<InvoiceDetail />} />
+            <Route path="/quotes" element={<Quotes />} />
             <Route path="/reports" element={<Reports />} />
           </Route>
         </Routes>
