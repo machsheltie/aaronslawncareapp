@@ -38,3 +38,6 @@ workbox-*.js
 
 # Supabase temp files
 supabase/.temp/
+
+# Local Netlify folder
+.netlify
