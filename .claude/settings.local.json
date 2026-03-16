@@ -1,0 +1,53 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx bmad-method:*)",
+      "Bash(bmad-method:*)",
+      "WebSearch",
+      "Bash(npm create:*)",
+      "Bash(npm init:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run type-check:*)",
+      "Bash(npm run dev)",
+      "Bash(xargs grep:*)",
+      "Bash(npm show:*)",
+      "Bash(npx:*)",
+      "Bash(node:*)",
+      "Bash(where npx:*)",
+      "Bash(npm uninstall:*)",
+      "mcp__upstash-context-7-mcp__resolve-library-id",
+      "mcp__upstash-context-7-mcp__query-docs",
+      "Read(//tmp/**)",
+      "Bash(\"C:\\\\Users\\\\heirr\\\\OneDrive\\\\Desktop\\\\Hope2_Studio\\\\Aarons_Lawn_Care\\\\app\\\\supabase\\\\migrations\\\\20260315170629_create_app_schema.sql\")",
+      "Bash(npm view:*)",
+      "WebFetch(domain:github.com)",
+      "mcp__supabase__deploy_edge_function",
+      "mcp__playwright-mcp-server__playwright_navigate",
+      "mcp__playwright-mcp-server__playwright_screenshot",
+      "mcp__playwright-mcp-server__playwright_get_visible_text",
+      "Bash(claude mcp:*)",
+      "Read(//c/Users/heirr/.claude/**)",
+      "mcp__stripe__search_stripe_documentation",
+      "Bash(curl:*)",
+      "Bash(curl.exe:*)",
+      "Bash(powershell:*)",
+      "mcp__plugin_supabase_supabase__get_logs",
+      "mcp__plugin_supabase_supabase__apply_migration",
+      "mcp__plugin_supabase_supabase__deploy_edge_function",
+      "mcp__plugin_supabase_supabase__execute_sql",
+      "Bash(wc:*)"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "upstash-context-7-mcp",
+    "knowall-ai-mcp-neo-4-j-agent-memory",
+    "memory-integration",
+    "playwright-mcp-server",
+    "github-integration",
+    "git",
+    "supabase",
+    "chrome-devtools",
+    "stripe"
+  ]
+}
