@@ -153,9 +153,9 @@ export function useUpdateInvoiceStatus() {
 
 export function useSendInvoiceSms() {
   return useMutation({
-    mutationFn: async (invoiceId: string) => {
+    mutationFn: async ({ invoiceId, photoPath }: { invoiceId: string; photoPath?: string }) => {
       const { data, error } = await supabase.functions.invoke('send-invoice-sms', {
-        body: { invoiceId },
+        body: { invoiceId, photoPath },
       })
       if (error) throw error
       if (data?.error && !data?.alreadyPaid) throw new Error(data.error)

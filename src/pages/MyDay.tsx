@@ -148,7 +148,7 @@ export default function MyDay() {
 
     try {
       // Upload the after photo
-      await uploadPhoto.mutateAsync({
+      const uploadedPhoto = await uploadPhoto.mutateAsync({
         jobId: workflow.jobId,
         file: photoFile,
         photoType: 'after' as PhotoType,
@@ -161,7 +161,7 @@ export default function MyDay() {
         actual_end_time: new Date().toISOString(),
       })
 
-      // Auto-create invoice and send SMS to customer
+      // Auto-create invoice and send SMS to customer with photo
       const job = todayJobs?.find(j => j.id === workflow.jobId)
       if (job) {
         const invoice = await createInvoice.mutateAsync({
@@ -171,8 +171,8 @@ export default function MyDay() {
           due_days: 30,
           notes: `${SERVICE_TYPES.find(s => s.value === job.service_type)?.label ?? job.service_type} — ${getToday()}`,
         })
-        // Send invoice via SMS (fire and forget — don't block completion)
-        sendSms.mutate(invoice.id)
+        // Send invoice via MMS with photo attached (fire and forget)
+        sendSms.mutate({ invoiceId: invoice.id, photoPath: uploadedPhoto.storage_path })
       }
 
       setPhotoFile(null)
@@ -227,8 +227,8 @@ export default function MyDay() {
           due_days: 30,
           notes: `${SERVICE_TYPES.find(s => s.value === job.service_type)?.label ?? job.service_type} — ${getToday()}`,
         })
-        // Send invoice via SMS (fire and forget)
-        sendSms.mutate(invoice.id)
+        // Send invoice via SMS — no photo attached
+        sendSms.mutate({ invoiceId: invoice.id })
       }
 
       setWorkflow({ step: 'idle' })

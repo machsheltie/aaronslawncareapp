@@ -102,6 +102,40 @@ export function useDeletePhoto() {
   })
 }
 
+/** Get all photos for a customer across all their jobs */
+export function useCustomerPhotos(customerId: string | undefined) {
+  return useQuery({
+    queryKey: ['customer-photos', customerId],
+    queryFn: async () => {
+      if (!customerId) return []
+
+      // Get all jobs for this customer
+      const { data: jobs, error: jobsError } = await supabase
+        .from('jobs')
+        .select('id')
+        .eq('customer_id', customerId)
+        .is('deleted_at', null)
+
+      if (jobsError) throw jobsError
+      if (!jobs || jobs.length === 0) return []
+
+      const jobIds = jobs.map(j => j.id)
+
+      // Get all photos for those jobs
+      const { data: photos, error: photosError } = await supabase
+        .from('photos')
+        .select('*, jobs(service_type, scheduled_date)')
+        .in('job_id', jobIds)
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false })
+
+      if (photosError) throw photosError
+      return photos as (Photo & { jobs: { service_type: string; scheduled_date: string } | null })[]
+    },
+    enabled: !!customerId,
+  })
+}
+
 /** Get a signed URL for a photo (valid 1 hour) */
 export async function getPhotoUrl(storagePath: string): Promise<string> {
   const { data, error } = await supabase.storage

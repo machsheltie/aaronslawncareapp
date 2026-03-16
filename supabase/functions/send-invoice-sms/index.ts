@@ -23,7 +23,7 @@ serve(async (req) => {
       httpClient: Stripe.createFetchHttpClient(),
     })
 
-    const { invoiceId } = await req.json()
+    const { invoiceId, photoPath } = await req.json()
 
     if (!invoiceId) {
       return new Response(
@@ -122,12 +122,27 @@ serve(async (req) => {
     const totalFormatted = Number(invoice.total).toFixed(2)
     const message = `Aaron's Lawn Care\n\nInvoice ${invoice.invoice_number}\nAmount: $${totalFormatted}\n\nPay securely here:\n${session.url}\n\nThank you for your business!`
 
+    // Generate a signed URL for the job photo if provided
+    let photoUrl: string | null = null
+    if (photoPath) {
+      const { data: signedData } = await supabase.storage
+        .from('job-photos')
+        .createSignedUrl(photoPath, 7200) // 2 hour expiry
+      if (signedData?.signedUrl) {
+        photoUrl = signedData.signedUrl
+      }
+    }
+
     const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${twilioSid}/Messages.json`
     const twilioBody = new URLSearchParams({
       To: phone,
       From: twilioPhone,
       Body: message,
     })
+    // Attach photo as MMS if available
+    if (photoUrl) {
+      twilioBody.append('MediaUrl', photoUrl)
+    }
 
     const twilioResp = await fetch(twilioUrl, {
       method: 'POST',

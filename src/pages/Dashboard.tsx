@@ -52,6 +52,21 @@ export default function Dashboard() {
         <StatCard label="Unpaid" value={`$${unpaidTotal.toFixed(0)}`} to="/invoices" />
       </div>
 
+      {/* Reports Link */}
+      <Link
+        to="/reports"
+        className="block rounded-lg shadow-sm border border-green-200 p-4 mb-8 hover:shadow-md transition-shadow"
+        style={{ backgroundColor: '#c0efbf' }}
+      >
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="font-semibold text-gray-800">Reports & Analytics</p>
+            <p className="text-sm text-gray-600 mt-0.5">Revenue, jobs, and performance breakdowns</p>
+          </div>
+          <span className="text-gray-400 text-xl">&rsaquo;</span>
+        </div>
+      </Link>
+
       {/* Today's Jobs */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-3">
