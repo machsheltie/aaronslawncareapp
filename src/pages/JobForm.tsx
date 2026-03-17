@@ -100,7 +100,7 @@ export default function JobForm() {
     if (isEditing && id) {
       await updateJob.mutateAsync({
         id,
-        customer_id: data.customer_id || null,
+        customer_id: data.customer_id!,
         service_type: data.service_type || 'mowing',
         scheduled_date: data.scheduled_date,
         scheduled_time_start: data.scheduled_time_start || null,
@@ -122,7 +122,7 @@ export default function JobForm() {
       if (qd.prospect_address) noteParts.unshift(`Address: ${qd.prospect_address}`)
 
       await createJob.mutateAsync({
-        customer_id: qd.customer_id || null,
+        customer_id: qd.customer_id!,
         service_type: qd.service_type || 'mowing',
         scheduled_date: qd.scheduled_date,
         scheduled_time_start: qd.scheduled_time_start || null,

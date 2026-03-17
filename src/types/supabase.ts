@@ -90,6 +90,41 @@ export type Database = {
           },
         ]
       }
+      customer_services: {
+        Row: {
+          created_at: string
+          customer_id: string
+          frequency: string
+          id: string
+          service_day: string | null
+          service_type: string
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          frequency?: string
+          id?: string
+          service_day?: string | null
+          service_type: string
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          frequency?: string
+          id?: string
+          service_day?: string | null
+          service_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_services_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           auth_user_id: string | null

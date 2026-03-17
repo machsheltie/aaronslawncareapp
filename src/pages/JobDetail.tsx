@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
-import { useJob, useUpdateJob, useDeleteJob, useRescheduleJob, SERVICE_TYPES, STATUS_OPTIONS, getServiceLabels } from '@/hooks/useJobs'
+import { useJob, useUpdateJob, useDeleteJob, useRescheduleJob, STATUS_OPTIONS, getServiceLabels } from '@/hooks/useJobs'
 import JobPhotos from '@/components/photos/JobPhotos'
 
 export default function JobDetail() {

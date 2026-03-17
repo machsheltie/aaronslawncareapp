@@ -1,9 +1,11 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useCustomer, useCreateCustomer, useUpdateCustomer } from '@/hooks/useCustomers'
+import { useCustomerServices, useAddCustomerService, useDeleteCustomerService } from '@/hooks/useCustomerServices'
+import { SERVICE_TYPES } from '@/hooks/useJobs'
 
 const customerSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -14,12 +16,24 @@ const customerSchema = z.object({
   property_state: z.string().min(1, 'State is required'),
   property_zip: z.string().min(1, 'Zip is required'),
   property_size: z.string().min(1, 'Property size is required'),
-  service_day: z.string().optional(),
-  service_frequency: z.string().optional(),
   notes: z.string().optional(),
 })
 
 type CustomerFormData = z.infer<typeof customerSchema>
+
+type PendingService = {
+  service_type: string
+  frequency: string
+  service_day: string
+}
+
+const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+const FREQUENCIES = [
+  { value: 'weekly', label: 'Weekly' },
+  { value: 'biweekly', label: 'Biweekly' },
+  { value: 'monthly', label: 'Monthly' },
+  { value: 'one_time', label: 'One-time' },
+]
 
 export default function CustomerForm() {
   const { id } = useParams()
@@ -27,8 +41,19 @@ export default function CustomerForm() {
   const isEditing = !!id
 
   const { data: customer, isLoading: loadingCustomer } = useCustomer(id)
+  const { data: existingServices } = useCustomerServices(id)
   const createCustomer = useCreateCustomer()
   const updateCustomer = useUpdateCustomer()
+  const addService = useAddCustomerService()
+  const deleteService = useDeleteCustomerService()
+
+  // Services to add (for new customers, or new services on existing)
+  const [pendingServices, setPendingServices] = useState<PendingService[]>([])
+  const [newService, setNewService] = useState<PendingService>({
+    service_type: 'mowing',
+    frequency: 'weekly',
+    service_day: '',
+  })
 
   const {
     register,
@@ -55,28 +80,59 @@ export default function CustomerForm() {
         property_state: customer.property_state ?? 'KY',
         property_zip: customer.property_zip ?? '',
         property_size: (customer.property_size as CustomerFormData['property_size']) ?? undefined,
-        service_day: customer.service_day ?? '',
-        service_frequency: customer.service_frequency ?? '',
         notes: customer.notes ?? '',
       })
     }
   }, [customer, reset])
 
+  const addPendingService = () => {
+    if (!newService.service_type) return
+    setPendingServices((prev) => [...prev, { ...newService }])
+    setNewService({ service_type: 'mowing', frequency: 'weekly', service_day: '' })
+  }
+
+  const removePendingService = (index: number) => {
+    setPendingServices((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  const handleDeleteExisting = (serviceId: string) => {
+    if (id) {
+      deleteService.mutate({ id: serviceId, customerId: id })
+    }
+  }
+
   const onSubmit = async (data: CustomerFormData) => {
     const payload = {
       ...data,
       email: data.email || null,
-      service_day: data.service_day || null,
-      service_frequency: data.service_frequency || null,
       notes: data.notes || null,
     }
 
     if (isEditing && id) {
       await updateCustomer.mutateAsync({ id, ...payload })
+      // Save any new pending services
+      for (const svc of pendingServices) {
+        await addService.mutateAsync({
+          customer_id: id,
+          service_type: svc.service_type,
+          frequency: svc.frequency,
+          service_day: svc.service_day || null,
+        })
+      }
+      navigate(`/customers/${id}`)
     } else {
-      await createCustomer.mutateAsync(payload)
+      const created = await createCustomer.mutateAsync(payload)
+      // Save all pending services for the new customer
+      for (const svc of pendingServices) {
+        await addService.mutateAsync({
+          customer_id: created.id,
+          service_type: svc.service_type,
+          frequency: svc.frequency,
+          service_day: svc.service_day || null,
+        })
+      }
+      navigate('/customers')
     }
-    navigate('/customers')
   }
 
   if (isEditing && loadingCustomer) {
@@ -144,28 +200,122 @@ export default function CustomerForm() {
           </select>
         </Field>
 
-        {/* Service Day & Frequency */}
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Service Day" optional>
-            <select {...register('service_day')} className={inputClass}>
-              <option value="">Not set</option>
-              <option value="Monday">Monday</option>
-              <option value="Tuesday">Tuesday</option>
-              <option value="Wednesday">Wednesday</option>
-              <option value="Thursday">Thursday</option>
-              <option value="Friday">Friday</option>
-              <option value="Saturday">Saturday</option>
-            </select>
-          </Field>
-          <Field label="Frequency" optional>
-            <select {...register('service_frequency')} className={inputClass}>
-              <option value="">Not set</option>
-              <option value="weekly">Weekly</option>
-              <option value="biweekly">Biweekly</option>
-              <option value="monthly">Monthly</option>
-              <option value="one_time">One-time</option>
-            </select>
-          </Field>
+        {/* === Services Section === */}
+        <div className="border-t border-gray-200 pt-4 mt-4">
+          <h3 className="text-sm font-semibold text-gray-800 mb-3">Services</h3>
+
+          {/* Existing services (edit mode only) */}
+          {isEditing && existingServices && existingServices.length > 0 && (
+            <div className="space-y-2 mb-3">
+              {existingServices.map((svc) => {
+                const typeLabel = SERVICE_TYPES.find(s => s.value === svc.service_type)?.label ?? svc.service_type
+                const freqLabel = FREQUENCIES.find(f => f.value === svc.frequency)?.label ?? svc.frequency
+                return (
+                  <div
+                    key={svc.id}
+                    className="flex items-center justify-between rounded-lg border border-green-200 p-2 px-3"
+                    style={{ backgroundColor: '#c0efbf' }}
+                  >
+                    <div className="text-sm">
+                      <span className="font-medium text-gray-800">{typeLabel}</span>
+                      <span className="text-gray-500 mx-1">·</span>
+                      <span className="text-gray-600">{freqLabel}</span>
+                      {svc.service_day && (
+                        <>
+                          <span className="text-gray-500 mx-1">·</span>
+                          <span className="text-gray-600">{svc.service_day}</span>
+                        </>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteExisting(svc.id)}
+                      className="text-red-400 hover:text-red-600 text-lg leading-none ml-2"
+                    >
+                      &times;
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
+          {/* Pending services (not yet saved) */}
+          {pendingServices.length > 0 && (
+            <div className="space-y-2 mb-3">
+              {pendingServices.map((svc, i) => {
+                const typeLabel = SERVICE_TYPES.find(s => s.value === svc.service_type)?.label ?? svc.service_type
+                const freqLabel = FREQUENCIES.find(f => f.value === svc.frequency)?.label ?? svc.frequency
+                return (
+                  <div
+                    key={i}
+                    className="flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50 p-2 px-3"
+                  >
+                    <div className="text-sm">
+                      <span className="font-medium text-gray-800">{typeLabel}</span>
+                      <span className="text-gray-500 mx-1">·</span>
+                      <span className="text-gray-600">{freqLabel}</span>
+                      {svc.service_day && (
+                        <>
+                          <span className="text-gray-500 mx-1">·</span>
+                          <span className="text-gray-600">{svc.service_day}</span>
+                        </>
+                      )}
+                      <span className="text-xs text-blue-500 ml-2">(new)</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removePendingService(i)}
+                      className="text-red-400 hover:text-red-600 text-lg leading-none ml-2"
+                    >
+                      &times;
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
+          {/* Add service row */}
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 space-y-2">
+            <div className="grid grid-cols-3 gap-2">
+              <select
+                value={newService.service_type}
+                onChange={(e) => setNewService(prev => ({ ...prev, service_type: e.target.value }))}
+                className={inputClass + ' text-sm'}
+              >
+                {SERVICE_TYPES.map(s => (
+                  <option key={s.value} value={s.value}>{s.label}</option>
+                ))}
+              </select>
+              <select
+                value={newService.frequency}
+                onChange={(e) => setNewService(prev => ({ ...prev, frequency: e.target.value }))}
+                className={inputClass + ' text-sm'}
+              >
+                {FREQUENCIES.map(f => (
+                  <option key={f.value} value={f.value}>{f.label}</option>
+                ))}
+              </select>
+              <select
+                value={newService.service_day}
+                onChange={(e) => setNewService(prev => ({ ...prev, service_day: e.target.value }))}
+                className={inputClass + ' text-sm'}
+              >
+                <option value="">Any day</option>
+                {DAYS.map(d => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+            </div>
+            <button
+              type="button"
+              onClick={addPendingService}
+              className="w-full text-sm bg-brand-green text-white py-1.5 rounded-md font-medium hover:bg-brand-accent transition-colors"
+            >
+              + Add Service
+            </button>
+          </div>
         </div>
 
         {/* Notes */}

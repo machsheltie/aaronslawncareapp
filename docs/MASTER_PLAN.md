@@ -17,7 +17,7 @@ This is the index for the feature expansion. Each phase has its own detailed spe
 | 4 | Customer Enhancements | Service day, communication log, past documents tab | COMPLETE |
 | 5 | Follow-Up Reminders | Schedule reminders that pin to top of My Day | COMPLETE |
 | 6 | Quote Scheduling for Prospects | Quote visits on schedule, convert to customer on win | COMPLETE |
-| 7 | Dashboard Expansion | Equipment, Expenses, Seasonal Reminders sections | NOT STARTED |
+| 7 | Dashboard Expansion | Equipment, Expenses, Seasonal Reminders sections | COMPLETE |
 | 8 | Contracts Generator | Contract builder (after template is provided by Stacey) | BLOCKED — waiting on template |
 
 ---

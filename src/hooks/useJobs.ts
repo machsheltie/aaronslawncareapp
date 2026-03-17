@@ -206,6 +206,10 @@ export const SERVICE_TYPES = [
   { value: 'tree_removal', label: 'Tree Removal' },
   { value: 'tilling', label: 'Tilling' },
   { value: 'snow_removal', label: 'Snow Removal' },
+  { value: 'spraying', label: 'Spraying' },
+  { value: 'weed_removal', label: 'Weed Removal' },
+  { value: 'mulching', label: 'Mulching' },
+  { value: 'seeding_grass', label: 'Seeding Grass' },
 ] as const
 
 /** Equipment needed per service type — Aaron's checklist */
@@ -220,6 +224,10 @@ export const SERVICE_EQUIPMENT: Record<string, string[]> = {
   tree_removal: ['Chainsaw', 'Pole saw', 'Ropes', 'Ladder', 'Safety glasses', 'Ear protection', 'Chaps', 'Hard hat'],
   tilling: ['Tiller', 'Rake', 'Gas can', 'Gloves'],
   snow_removal: ['Snow blower', 'Snow shovel', 'Ice melt/salt', 'Gloves'],
+  spraying: ['Backpack sprayer', 'Herbicide/pesticide', 'Gloves', 'Safety glasses', 'Respirator mask'],
+  weed_removal: ['Gloves', 'Weed puller', 'Knee pad', 'Trash bags', 'Herbicide'],
+  mulching: ['Wheelbarrow', 'Shovels', 'Rake', 'Gloves', 'Mulch'],
+  seeding_grass: ['Seed spreader', 'Grass seed', 'Rake', 'Topsoil', 'Straw/cover'],
 }
 
 /** Parse comma-separated service_type string into array */

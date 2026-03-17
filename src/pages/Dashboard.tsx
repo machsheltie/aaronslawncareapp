@@ -2,11 +2,12 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useCustomers } from '@/hooks/useCustomers'
-import { useJobs, useRainDay, SERVICE_TYPES, STATUS_OPTIONS, getServiceLabels } from '@/hooks/useJobs'
+import { useJobs, useRainDay, STATUS_OPTIONS, getServiceLabels } from '@/hooks/useJobs'
 import { useTodayReminders, useCompleteReminder } from '@/hooks/useReminders'
 import FollowUpForm from '@/components/FollowUpForm'
 import { useGenerateUpcomingJobs } from '@/hooks/useRecurringSchedules'
 import { useInvoices } from '@/hooks/useInvoices'
+import { useExpenses } from '@/hooks/useExpenses'
 import type { JobWithCustomer } from '@/hooks/useJobs'
 
 function getToday() {
@@ -33,6 +34,11 @@ export default function Dashboard() {
   const { data: paidInvoices } = useInvoices({ status: 'paid' })
   const unpaidTotal = unpaidInvoices?.reduce((sum, i) => sum + Number(i.total), 0) ?? 0
   const paidTotal = paidInvoices?.reduce((sum, i) => sum + Number(i.total), 0) ?? 0
+
+  // Expenses this month
+  const currentMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`
+  const { data: monthExpenses } = useExpenses({ month: currentMonth })
+  const expenseTotal = monthExpenses?.reduce((sum, e) => sum + Number(e.amount), 0) ?? 0
 
   const rainDay = useRainDay()
   const [showRainDay, setShowRainDay] = useState(false)
@@ -77,6 +83,34 @@ export default function Dashboard() {
           <span className="text-gray-400 text-xl">&rsaquo;</span>
         </div>
       </Link>
+
+      {/* Section Cards — Equipment, Expenses, Seasonal */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+        <Link
+          to="/equipment"
+          className="rounded-lg shadow-sm border border-green-200 p-4 hover:shadow-md transition-shadow"
+          style={{ backgroundColor: '#c0efbf' }}
+        >
+          <p className="font-semibold text-gray-800">Equipment & Maintenance</p>
+          <p className="text-sm text-gray-600 mt-0.5">Track gear, hours, and service logs</p>
+        </Link>
+        <Link
+          to="/expenses"
+          className="rounded-lg shadow-sm border border-green-200 p-4 hover:shadow-md transition-shadow"
+          style={{ backgroundColor: '#c0efbf' }}
+        >
+          <p className="font-semibold text-gray-800">Expenses</p>
+          <p className="text-sm text-gray-600 mt-0.5">This month: ${expenseTotal.toFixed(0)}</p>
+        </Link>
+        <Link
+          to="/seasonal-reminders"
+          className="rounded-lg shadow-sm border border-green-200 p-4 hover:shadow-md transition-shadow"
+          style={{ backgroundColor: '#c0efbf' }}
+        >
+          <p className="font-semibold text-gray-800">Seasonal Reminders</p>
+          <p className="text-sm text-gray-600 mt-0.5">Email templates for customers</p>
+        </Link>
+      </div>
 
       {/* Follow-Up Reminders */}
       <div className="mb-8">

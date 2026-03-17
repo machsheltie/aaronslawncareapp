@@ -55,16 +55,16 @@ Mark tasks `[x]` as they are completed. After completing a task, check the next 
 - [x] 6.6 Build check
 
 ## Phase 7: Dashboard Expansion
-- [ ] 7.1 Create useEquipment.ts hook
-- [ ] 7.2 Create Equipment.tsx, EquipmentDetail.tsx, EquipmentForm.tsx pages
-- [ ] 7.3 Create useExpenses.ts hook
-- [ ] 7.4 Create Expenses.tsx and ExpenseForm.tsx pages (with receipt upload)
-- [ ] 7.5 Create useSeasonalMessages.ts hook
-- [ ] 7.6 Create SeasonalReminders.tsx and SeasonalReminderForm.tsx pages
-- [ ] 7.7 Create send-seasonal-email edge function
-- [ ] 7.8 Add Equipment, Expenses, Seasonal Reminders section cards to Dashboard
-- [ ] 7.9 Add all new routes to App.tsx
-- [ ] 7.10 Build check
+- [x] 7.1 Create useEquipment.ts hook
+- [x] 7.2 Create Equipment.tsx, EquipmentDetail.tsx, EquipmentForm.tsx pages
+- [x] 7.3 Create useExpenses.ts hook
+- [x] 7.4 Create Expenses.tsx and ExpenseForm.tsx pages (with receipt upload)
+- [x] 7.5 Create useSeasonalMessages.ts hook
+- [x] 7.6 Create SeasonalReminders.tsx and SeasonalReminderForm.tsx pages
+- [ ] 7.7 Create send-seasonal-email edge function (deferred — edge function for actual sending)
+- [x] 7.8 Add Equipment, Expenses, Seasonal Reminders section cards to Dashboard
+- [x] 7.9 Add all new routes to App.tsx
+- [x] 7.10 Build check
 
 ## Phase 8: Contracts (BLOCKED)
 - [ ] 8.1 Receive contract template from Stacey

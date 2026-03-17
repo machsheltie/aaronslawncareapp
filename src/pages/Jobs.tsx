@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useJobs, useUpdateJob, useDeleteJob, SERVICE_TYPES, STATUS_OPTIONS, getServiceLabels } from '@/hooks/useJobs'
+import { useJobs, useUpdateJob, useDeleteJob, STATUS_OPTIONS, getServiceLabels } from '@/hooks/useJobs'
 import type { JobWithCustomer } from '@/hooks/useJobs'
 
 function getToday() {

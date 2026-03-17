@@ -3,6 +3,7 @@ import { Link, useParams, useNavigate } from 'react-router-dom'
 import { useCustomer, useDeleteCustomer } from '@/hooks/useCustomers'
 import { useCustomerPhotos, getPhotoUrl, PHOTO_TYPES } from '@/hooks/usePhotos'
 import { SERVICE_TYPES, useJobs, getServiceLabels } from '@/hooks/useJobs'
+import { useCustomerServices } from '@/hooks/useCustomerServices'
 import { useCustomerComms, useAddComm, useDeleteComm } from '@/hooks/useCustomerComms'
 import { useInvoices, PAYMENT_STATUS_OPTIONS } from '@/hooks/useInvoices'
 import FollowUpForm from '@/components/FollowUpForm'
@@ -82,32 +83,7 @@ export default function CustomerDetail() {
         ))}
       </div>
 
-      {activeTab === 'info' && (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-6 space-y-4">
-          <Section title="Contact">
-            <InfoRow label="Phone" value={customer.phone} />
-            <InfoRow label="Email" value={customer.email ?? '—'} />
-          </Section>
-
-          <Section title="Property">
-            <InfoRow label="Address" value={`${customer.property_address}, ${customer.property_city} ${customer.property_state} ${customer.property_zip ?? ''}`} />
-            <InfoRow label="Size" value={customer.property_size ? customer.property_size.replace('_', ' ') : '—'} />
-            {customer.service_day && <InfoRow label="Service Day" value={customer.service_day} />}
-            {customer.service_frequency && <InfoRow label="Frequency" value={customer.service_frequency.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())} />}
-          </Section>
-
-          {customer.notes && (
-            <Section title="Notes">
-              <p className="text-gray-700 text-sm">{customer.notes}</p>
-            </Section>
-          )}
-
-          <Section title="Status">
-            <InfoRow label="Active" value={customer.is_active ? 'Yes' : 'No'} />
-            <InfoRow label="Added" value={customer.created_at ? new Date(customer.created_at).toLocaleDateString() : '—'} />
-          </Section>
-        </div>
-      )}
+      {activeTab === 'info' && <InfoTab customer={customer} />}
 
       {activeTab === 'history' && <ServiceHistory customerId={customer.id} />}
 
@@ -116,6 +92,67 @@ export default function CustomerDetail() {
       {activeTab === 'docs' && <CustomerDocs customerId={customer.id} />}
 
       {activeTab === 'photos' && <PhotoGallery customerId={customer.id} />}
+    </div>
+  )
+}
+
+const FREQ_LABELS: Record<string, string> = {
+  weekly: 'Weekly',
+  biweekly: 'Biweekly',
+  monthly: 'Monthly',
+  one_time: 'One-time',
+}
+
+function InfoTab({ customer }: { customer: { id: string; phone: string; email: string | null; property_address: string; property_city: string | null; property_state: string | null; property_zip: string | null; property_size: string | null; notes: string | null; is_active: boolean | null; created_at: string | null } }) {
+  const { data: services } = useCustomerServices(customer.id)
+
+  return (
+    <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-6 space-y-4">
+      <Section title="Contact">
+        <InfoRow label="Phone" value={customer.phone} />
+        <InfoRow label="Email" value={customer.email ?? '—'} />
+      </Section>
+
+      <Section title="Property">
+        <InfoRow label="Address" value={`${customer.property_address}, ${customer.property_city} ${customer.property_state} ${customer.property_zip ?? ''}`} />
+        <InfoRow label="Size" value={customer.property_size ? customer.property_size.replace('_', ' ') : '—'} />
+      </Section>
+
+      {/* Services */}
+      <Section title="Services">
+        {(!services || services.length === 0) && (
+          <p className="text-sm text-gray-400">No services set up yet.</p>
+        )}
+        {services && services.length > 0 && (
+          <div className="space-y-1.5">
+            {services.map((svc) => {
+              const typeLabel = SERVICE_TYPES.find(s => s.value === svc.service_type)?.label ?? svc.service_type
+              return (
+                <div key={svc.id} className="flex items-center gap-2 text-sm">
+                  <span className="font-medium text-gray-800">{typeLabel}</span>
+                  <span className="text-xs px-1.5 py-0.5 rounded bg-green-100 text-green-700 font-medium">
+                    {FREQ_LABELS[svc.frequency] ?? svc.frequency}
+                  </span>
+                  {svc.service_day && (
+                    <span className="text-xs text-gray-500">{svc.service_day}</span>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </Section>
+
+      {customer.notes && (
+        <Section title="Notes">
+          <p className="text-gray-700 text-sm">{customer.notes}</p>
+        </Section>
+      )}
+
+      <Section title="Status">
+        <InfoRow label="Active" value={customer.is_active ? 'Yes' : 'No'} />
+        <InfoRow label="Added" value={customer.created_at ? new Date(customer.created_at).toLocaleDateString() : '—'} />
+      </Section>
     </div>
   )
 }
@@ -278,8 +315,8 @@ function CommsLog({ customerId }: { customerId: string }) {
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-gray-800">{comm.note}</p>
                 <p className="text-xs text-gray-400 mt-1">
-                  {comm.comm_date
-                    ? new Date(comm.comm_date).toLocaleDateString('en-US', {
+                  {comm.created_at
+                    ? new Date(comm.created_at).toLocaleDateString('en-US', {
                         month: 'short',
                         day: 'numeric',
                         year: 'numeric',
