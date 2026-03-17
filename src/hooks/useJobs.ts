@@ -131,6 +131,70 @@ export function useDeleteJob() {
   })
 }
 
+export function useRescheduleJob() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ jobId, newDate }: { jobId: string; newDate: string }) => {
+      // First get the current job to save original_date
+      const { data: job, error: fetchError } = await supabase
+        .from('jobs')
+        .select('scheduled_date, original_date')
+        .eq('id', jobId)
+        .single()
+      if (fetchError) throw fetchError
+
+      const { error } = await supabase
+        .from('jobs')
+        .update({
+          scheduled_date: newDate,
+          original_date: job.original_date ?? job.scheduled_date,
+          is_rescheduled: true,
+        })
+        .eq('id', jobId)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['jobs'] })
+    },
+  })
+}
+
+export function useRainDay() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ fromDate, toDate }: { fromDate: string; toDate: string }) => {
+      // Get all scheduled jobs for the given date
+      const { data: jobs, error: fetchError } = await supabase
+        .from('jobs')
+        .select('id, scheduled_date, original_date')
+        .eq('scheduled_date', fromDate)
+        .eq('status', 'scheduled')
+        .is('deleted_at', null)
+      if (fetchError) throw fetchError
+      if (!jobs || jobs.length === 0) return { count: 0 }
+
+      // Bulk update each job
+      const updates = jobs.map((job) =>
+        supabase
+          .from('jobs')
+          .update({
+            scheduled_date: toDate,
+            original_date: job.original_date ?? job.scheduled_date,
+            is_rescheduled: true,
+          })
+          .eq('id', job.id)
+      )
+      await Promise.all(updates)
+      return { count: jobs.length }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['jobs'] })
+    },
+  })
+}
+
 export const SERVICE_TYPES = [
   { value: 'mowing', label: 'Mowing' },
   { value: 'edging', label: 'Edging' },

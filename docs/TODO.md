@@ -21,13 +21,13 @@ Mark tasks `[x]` as they are completed. After completing a task, check the next 
 - [x] 2.5 Build check + visual verify on mobile
 
 ## Phase 3: Job Rescheduling & Rain Day
-- [ ] 3.1 Add useRescheduleJob hook to useJobs.ts
-- [ ] 3.2 Add useRainDay hook to useJobs.ts
-- [ ] 3.3 Add Reschedule button to JobDetail.tsx (with date picker)
-- [ ] 3.4 Add Rain Day button to MyDay.tsx
-- [ ] 3.5 Add Rain Day button to Dashboard.tsx (Today's Jobs section)
-- [ ] 3.6 Show rescheduled badge on job cards in MyDay and Jobs list
-- [ ] 3.7 Build check
+- [x] 3.1 Add useRescheduleJob hook to useJobs.ts
+- [x] 3.2 Add useRainDay hook to useJobs.ts
+- [x] 3.3 Add Reschedule button to JobDetail.tsx (with date picker)
+- [x] 3.4 Add Rain Day button to MyDay.tsx
+- [x] 3.5 Add Rain Day button to Dashboard.tsx (Today's Jobs section)
+- [x] 3.6 Show rescheduled badge on job cards in MyDay and Jobs list
+- [x] 3.7 Build check
 
 ## Phase 4: Customer Enhancements
 - [ ] 4.1 Add service_day + service_frequency to CustomerForm.tsx

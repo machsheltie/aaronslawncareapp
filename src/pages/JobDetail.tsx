@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
-import { useJob, useUpdateJob, useDeleteJob, SERVICE_TYPES, STATUS_OPTIONS } from '@/hooks/useJobs'
+import { useJob, useUpdateJob, useDeleteJob, useRescheduleJob, SERVICE_TYPES, STATUS_OPTIONS } from '@/hooks/useJobs'
 import JobPhotos from '@/components/photos/JobPhotos'
 
 export default function JobDetail() {
@@ -9,8 +9,11 @@ export default function JobDetail() {
   const { data: job, isLoading, error } = useJob(id)
   const updateJob = useUpdateJob()
   const deleteJob = useDeleteJob()
+  const rescheduleJob = useRescheduleJob()
   const [editingNotes, setEditingNotes] = useState(false)
   const [noteText, setNoteText] = useState('')
+  const [showReschedule, setShowReschedule] = useState(false)
+  const [rescheduleDate, setRescheduleDate] = useState('')
 
   const handleStatusChange = (newStatus: string) => {
     if (!job) return
@@ -55,11 +58,31 @@ export default function JobDetail() {
             &larr; All Jobs
           </Link>
           <h2 className="text-2xl font-bold text-gray-800">{serviceLabel}</h2>
-          <span className={`inline-block text-xs px-2 py-0.5 rounded-full font-medium mt-1 ${statusInfo?.color ?? ''}`}>
-            {statusInfo?.label ?? job.status}
-          </span>
+          <div className="flex items-center gap-2 mt-1">
+            <span className={`inline-block text-xs px-2 py-0.5 rounded-full font-medium ${statusInfo?.color ?? ''}`}>
+              {statusInfo?.label ?? job.status}
+            </span>
+            {job.is_rescheduled && job.original_date && (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700 font-medium">
+                Rescheduled from {new Date(job.original_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              </span>
+            )}
+          </div>
         </div>
         <div className="flex gap-2">
+          {(job.status === 'scheduled' || job.status === 'in_progress') && (
+            <button
+              onClick={() => {
+                const tomorrow = new Date()
+                tomorrow.setDate(tomorrow.getDate() + 1)
+                setRescheduleDate(tomorrow.toISOString().split('T')[0])
+                setShowReschedule(true)
+              }}
+              className="bg-yellow-100 text-yellow-800 px-4 py-2 rounded-md text-sm font-medium hover:bg-yellow-200 transition-colors"
+            >
+              Reschedule
+            </button>
+          )}
           <Link
             to={`/jobs/${job.id}/edit`}
             className="bg-brand-green text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-brand-accent transition-colors"
@@ -111,6 +134,40 @@ export default function JobDetail() {
         >
           Create Invoice for This Job
         </Link>
+      )}
+
+      {/* Reschedule Panel */}
+      {showReschedule && (
+        <div className="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-4 mb-4">
+          <h3 className="font-semibold text-yellow-800 mb-2">Reschedule Job</h3>
+          <input
+            type="date"
+            value={rescheduleDate}
+            onChange={(e) => setRescheduleDate(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+          />
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                if (!rescheduleDate) return
+                rescheduleJob.mutate(
+                  { jobId: job.id, newDate: rescheduleDate },
+                  { onSuccess: () => setShowReschedule(false) }
+                )
+              }}
+              disabled={rescheduleJob.isPending}
+              className="flex-1 bg-yellow-500 text-white py-2 rounded-md font-medium text-sm hover:bg-yellow-600 transition-colors"
+            >
+              {rescheduleJob.isPending ? 'Moving...' : 'Move to This Date'}
+            </button>
+            <button
+              onClick={() => setShowReschedule(false)}
+              className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
       )}
 
       {/* Info Card */}

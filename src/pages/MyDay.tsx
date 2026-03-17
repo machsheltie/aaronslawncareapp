@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useJobs, useUpdateJob, SERVICE_TYPES, getFullAddress } from '@/hooks/useJobs'
+import { useJobs, useUpdateJob, useRescheduleJob, useRainDay, SERVICE_TYPES, getFullAddress } from '@/hooks/useJobs'
 import { useUploadPhoto } from '@/hooks/usePhotos'
 import { useCreateInvoice, useSendInvoiceSms } from '@/hooks/useInvoices'
 import { useGenerateUpcomingJobs } from '@/hooks/useRecurringSchedules'
@@ -27,8 +27,14 @@ export default function MyDay() {
   const sendSms = useSendInvoiceSms()
   const generateJobs = useGenerateUpcomingJobs()
   const skipWeek = useSkipWeek()
+  const rescheduleJob = useRescheduleJob()
+  const rainDay = useRainDay()
 
   const [workflow, setWorkflow] = useState<WorkflowState>({ step: 'idle' })
+  const [showRainDay, setShowRainDay] = useState(false)
+  const [rainDayDate, setRainDayDate] = useState('')
+  const [rescheduleJobId, setRescheduleJobId] = useState<string | null>(null)
+  const [rescheduleDate, setRescheduleDate] = useState('')
   const [routeOrder, setRouteOrder] = useState<string[]>([])
   const [totalMiles, setTotalMiles] = useState<number | null>(null)
   const [optimizing, setOptimizing] = useState(false)
@@ -257,10 +263,27 @@ export default function MyDay() {
     <div className="max-w-lg mx-auto">
       {/* Header */}
       <div className="mb-4">
-        <h2 className="text-2xl font-bold text-gray-800">My Day</h2>
-        <p className="text-sm text-gray-500">
-          {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-800">My Day</h2>
+            <p className="text-sm text-gray-500">
+              {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+            </p>
+          </div>
+          {totalCount > 0 && sortedJobs.some(j => j.status === 'scheduled') && (
+            <button
+              onClick={() => {
+                const tomorrow = new Date()
+                tomorrow.setDate(tomorrow.getDate() + 1)
+                setRainDayDate(tomorrow.toISOString().split('T')[0])
+                setShowRainDay(true)
+              }}
+              className="bg-blue-100 text-blue-700 px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-200 transition-colors"
+            >
+              Rain Day
+            </button>
+          )}
+        </div>
         <div className="flex items-center gap-3 mt-2">
           <span className="text-sm font-medium text-gray-600">
             {completedCount}/{totalCount} jobs done
@@ -283,6 +306,89 @@ export default function MyDay() {
           </div>
         )}
       </div>
+
+      {/* Rain Day Modal */}
+      {showRainDay && (
+        <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4 mb-4">
+          <h3 className="font-semibold text-blue-800 mb-2">Rain Day — Move All Scheduled Jobs</h3>
+          <p className="text-sm text-blue-600 mb-3">Jobs already in progress or completed won't be moved.</p>
+          <input
+            type="date"
+            value={rainDayDate}
+            onChange={(e) => setRainDayDate(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-blue-400"
+          />
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                if (!rainDayDate) return
+                rainDay.mutate(
+                  { fromDate: getToday(), toDate: rainDayDate },
+                  {
+                    onSuccess: (result) => {
+                      setShowRainDay(false)
+                      const dateLabel = new Date(rainDayDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+                      alert(`${result.count} job${result.count !== 1 ? 's' : ''} moved to ${dateLabel}`)
+                      refetch()
+                    },
+                  }
+                )
+              }}
+              disabled={rainDay.isPending}
+              className="flex-1 bg-blue-600 text-white py-2 rounded-md font-medium text-sm hover:bg-blue-700 transition-colors"
+            >
+              {rainDay.isPending ? 'Moving...' : 'Move All Jobs'}
+            </button>
+            <button
+              onClick={() => setShowRainDay(false)}
+              className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Reschedule Single Job Modal */}
+      {rescheduleJobId && (
+        <div className="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-4 mb-4">
+          <h3 className="font-semibold text-yellow-800 mb-2">
+            Reschedule — {todayJobs?.find(j => j.id === rescheduleJobId)?.customers?.name ?? 'Job'}
+          </h3>
+          <input
+            type="date"
+            value={rescheduleDate}
+            onChange={(e) => setRescheduleDate(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+          />
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                if (!rescheduleDate) return
+                rescheduleJob.mutate(
+                  { jobId: rescheduleJobId, newDate: rescheduleDate },
+                  {
+                    onSuccess: () => {
+                      setRescheduleJobId(null)
+                      refetch()
+                    },
+                  }
+                )
+              }}
+              disabled={rescheduleJob.isPending}
+              className="flex-1 bg-yellow-500 text-white py-2 rounded-md font-medium text-sm hover:bg-yellow-600 transition-colors"
+            >
+              {rescheduleJob.isPending ? 'Moving...' : 'Move to This Date'}
+            </button>
+            <button
+              onClick={() => setRescheduleJobId(null)}
+              className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* No jobs */}
       {totalCount === 0 && (
@@ -389,8 +495,20 @@ export default function MyDay() {
                     </span>
                   )}
                   <div>
-                    <p className="font-semibold text-gray-800 text-sm">{service}</p>
+                    <div className="flex items-center gap-1.5">
+                      <p className="font-semibold text-gray-800 text-sm">{service}</p>
+                      {job.is_rescheduled && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-yellow-100 text-yellow-700 font-medium">
+                          Rescheduled
+                        </span>
+                      )}
+                    </div>
                     <p className="text-xs text-gray-500">{job.customers?.name}</p>
+                    {job.is_rescheduled && job.original_date && (
+                      <p className="text-[10px] text-yellow-600">
+                        Originally {new Date(job.original_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </p>
+                    )}
                   </div>
                 </div>
                 {job.estimated_price && (
@@ -422,15 +540,28 @@ export default function MyDay() {
                     </button>
                   )}
                   {job.status === 'scheduled' && (
-                    <button
-                      onClick={() => handleSkip(job)}
-                      className="px-4 py-2.5 border rounded-md text-sm font-medium transition-colors"
-                      style={{ backgroundColor: '#fff25c', color: '#132b13', borderColor: '#e6d94f' }}
-                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#fff8a9')}
-                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#fff25c')}
-                    >
-                      Skip
-                    </button>
+                    <>
+                      <button
+                        onClick={() => {
+                          const tomorrow = new Date()
+                          tomorrow.setDate(tomorrow.getDate() + 1)
+                          setRescheduleDate(tomorrow.toISOString().split('T')[0])
+                          setRescheduleJobId(job.id)
+                        }}
+                        className="px-3 py-2.5 border border-yellow-300 text-yellow-700 rounded-md text-sm font-medium hover:bg-yellow-100 transition-colors"
+                      >
+                        Move
+                      </button>
+                      <button
+                        onClick={() => handleSkip(job)}
+                        className="px-4 py-2.5 border rounded-md text-sm font-medium transition-colors"
+                        style={{ backgroundColor: '#fff25c', color: '#132b13', borderColor: '#e6d94f' }}
+                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#fff8a9')}
+                        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#fff25c')}
+                      >
+                        Skip
+                      </button>
+                    </>
                   )}
                   {isActive && (
                     <>

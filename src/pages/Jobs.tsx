@@ -123,6 +123,11 @@ export default function Jobs() {
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusInfo?.color ?? ''}`}>
                         {statusInfo?.label ?? job.status}
                       </span>
+                      {job.is_rescheduled && (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700 font-medium">
+                          Rescheduled
+                        </span>
+                      )}
                     </div>
                     <p className="text-sm text-gray-600">{job.customers?.name ?? 'Unknown'}</p>
                     <p className="text-xs text-gray-400">{job.customers?.property_address}</p>
