@@ -10,7 +10,7 @@ import jobsIcon from '@/assets/icons/jobs.png'
 import customersIcon from '@/assets/icons/customers.png'
 import invoicesIcon from '@/assets/icons/invoices.png'
 import dashboardIcon from '@/assets/icons/dashboard.png'
-import quoteIcon from '@/assets/icons/quote.png'
+// quote icon unused after Documents consolidation
 import LOGO_SRC from '@/assets/logo-base64'
 
 export function AppLayout() {
@@ -98,8 +98,7 @@ export function AppLayout() {
           <NavItem to="/" label="My Day" icon={mydayIcon} />
           <NavItem to="/jobs" label="Jobs" icon={jobsIcon} />
           <NavItem to="/customers" label="Customers" icon={customersIcon} />
-          <NavItem to="/invoices" label="Invoices" icon={invoicesIcon} />
-          <NavItem to="/quotes" label="Quotes" icon={quoteIcon} />
+          <NavItem to="/documents" label="Documents" icon={invoicesIcon} />
           <NavItem to="/dashboard" label="Dashboard" icon={dashboardIcon} />
         </div>
       </nav>

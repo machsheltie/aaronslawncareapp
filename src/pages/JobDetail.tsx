@@ -106,7 +106,7 @@ export default function JobDetail() {
       {/* Create Invoice for completed jobs */}
       {job.status === 'completed' && (
         <Link
-          to={`/invoices/new?customer=${job.customer_id}&job=${job.id}`}
+          to={`/documents/invoices/new?customer=${job.customer_id}&job=${job.id}`}
           className="block bg-brand-green text-white text-center py-3 rounded-lg font-medium hover:bg-brand-accent transition-colors mb-4"
         >
           Create Invoice for This Job

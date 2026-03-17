@@ -24,7 +24,7 @@ export default function InvoiceDetail() {
 
   const handleDelete = () => {
     if (invoice && confirm('Delete this invoice?')) {
-      deleteInvoice.mutate(invoice.id, { onSuccess: () => navigate('/invoices') })
+      deleteInvoice.mutate(invoice.id, { onSuccess: () => navigate('/documents/invoices') })
     }
   }
 
@@ -40,7 +40,7 @@ export default function InvoiceDetail() {
     return (
       <div className="text-center py-12">
         <p className="text-red-500 mb-4">Invoice not found.</p>
-        <Link to="/invoices" className="text-brand-green hover:underline">Back to invoices</Link>
+        <Link to="/documents/invoices" className="text-brand-green hover:underline">Back to invoices</Link>
       </div>
     )
   }
@@ -53,7 +53,7 @@ export default function InvoiceDetail() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <Link to="/invoices" className="text-sm text-brand-green hover:underline mb-1 inline-block">
+          <Link to="/documents/invoices" className="text-sm text-brand-green hover:underline mb-1 inline-block">
             &larr; All Invoices
           </Link>
           <h2 className="text-2xl font-bold text-gray-800">{invoice.invoice_number}</h2>

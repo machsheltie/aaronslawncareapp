@@ -48,8 +48,8 @@ export default function Dashboard() {
         <StatCard label="Scheduled" value={String(scheduledCount)} to="/jobs" />
         <StatCard label="In Progress" value={String(inProgressCount)} to="/jobs" />
         <StatCard label="Customers" value={String(customers?.length ?? 0)} to="/customers" />
-        <StatCard label="Collected" value={`$${paidTotal.toFixed(0)}`} to="/invoices" />
-        <StatCard label="Unpaid" value={`$${unpaidTotal.toFixed(0)}`} to="/invoices" />
+        <StatCard label="Collected" value={`$${paidTotal.toFixed(0)}`} to="/documents/invoices" />
+        <StatCard label="Unpaid" value={`$${unpaidTotal.toFixed(0)}`} to="/documents/invoices" />
       </div>
 
       {/* Reports Link */}

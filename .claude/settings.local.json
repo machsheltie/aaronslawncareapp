@@ -35,7 +35,9 @@
       "mcp__plugin_supabase_supabase__apply_migration",
       "mcp__plugin_supabase_supabase__deploy_edge_function",
       "mcp__plugin_supabase_supabase__execute_sql",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(npm run:*)",
+      "mcp__plugin_supabase_supabase__generate_typescript_types"
     ]
   },
   "enableAllProjectMcpServers": true,

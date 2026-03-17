@@ -17,6 +17,7 @@ import InvoiceDetail from '@/pages/InvoiceDetail'
 import Reports from '@/pages/Reports'
 import MyDay from '@/pages/MyDay'
 import Quotes from '@/pages/Quotes'
+import Documents from '@/pages/Documents'
 
 function App() {
   return (
@@ -45,10 +46,11 @@ function App() {
             <Route path="/jobs/:id" element={<JobDetail />} />
             <Route path="/jobs/:id/edit" element={<JobForm />} />
             <Route path="/schedules" element={<Schedules />} />
-            <Route path="/invoices" element={<Invoices />} />
-            <Route path="/invoices/new" element={<InvoiceForm />} />
-            <Route path="/invoices/:id" element={<InvoiceDetail />} />
-            <Route path="/quotes" element={<Quotes />} />
+            <Route path="/documents" element={<Documents />} />
+            <Route path="/documents/invoices" element={<Invoices />} />
+            <Route path="/documents/invoices/new" element={<InvoiceForm />} />
+            <Route path="/documents/invoices/:id" element={<InvoiceDetail />} />
+            <Route path="/documents/quotes" element={<Quotes />} />
             <Route path="/reports" element={<Reports />} />
           </Route>
         </Routes>

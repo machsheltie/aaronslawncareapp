@@ -72,7 +72,7 @@ export default function InvoiceForm() {
       due_days: parseInt(data.due_days || '30', 10),
       notes: data.notes || undefined,
     })
-    navigate('/invoices')
+    navigate('/documents/invoices')
   }
 
   return (
@@ -168,7 +168,7 @@ export default function InvoiceForm() {
           </button>
           <button
             type="button"
-            onClick={() => navigate('/invoices')}
+            onClick={() => navigate('/documents/invoices')}
             className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
           >
             Cancel

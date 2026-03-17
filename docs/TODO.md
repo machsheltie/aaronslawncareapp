@@ -14,11 +14,11 @@ Mark tasks `[x]` as they are completed. After completing a task, check the next 
 - [x] 1.5 Verify existing app still works (build check)
 
 ## Phase 2: Documents Hub
-- [ ] 2.1 Create Documents.tsx hub page with 3 cards
-- [ ] 2.2 Update AppLayout.tsx nav (replace Invoices + Quotes with Documents)
-- [ ] 2.3 Update App.tsx routes (nest quotes/invoices under /documents)
-- [ ] 2.4 Update all internal Link references across the app
-- [ ] 2.5 Build check + visual verify on mobile
+- [x] 2.1 Create Documents.tsx hub page with 3 cards
+- [x] 2.2 Update AppLayout.tsx nav (replace Invoices + Quotes with Documents)
+- [x] 2.3 Update App.tsx routes (nest quotes/invoices under /documents)
+- [x] 2.4 Update all internal Link references across the app
+- [x] 2.5 Build check + visual verify on mobile
 
 ## Phase 3: Job Rescheduling & Rain Day
 - [ ] 3.1 Add useRescheduleJob hook to useJobs.ts
