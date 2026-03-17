@@ -7,11 +7,11 @@ Mark tasks `[x]` as they are completed. After completing a task, check the next 
 ---
 
 ## Phase 1: Database Migrations
-- [ ] 1.1 Write SQL migration for all new tables (follow_up_reminders, customer_communications, expenses, equipment, maintenance_log, seasonal_messages, contracts)
-- [ ] 1.2 Write SQL migration for altered tables (customers: service_day + service_frequency, jobs: is_rescheduled + original_date + job_type)
-- [ ] 1.3 Apply migration via Supabase MCP
-- [ ] 1.4 Regenerate TypeScript types
-- [ ] 1.5 Verify existing app still works (build check)
+- [x] 1.1 Write SQL migration for all new tables (follow_up_reminders, customer_communications, expenses, equipment, maintenance_log, seasonal_messages, contracts)
+- [x] 1.2 Write SQL migration for altered tables (customers: service_day + service_frequency, jobs: is_rescheduled + original_date + job_type)
+- [x] 1.3 Apply migration via Supabase MCP
+- [x] 1.4 Regenerate TypeScript types
+- [x] 1.5 Verify existing app still works (build check)
 
 ## Phase 2: Documents Hub
 - [ ] 2.1 Create Documents.tsx hub page with 3 cards

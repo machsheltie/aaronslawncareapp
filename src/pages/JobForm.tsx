@@ -13,7 +13,7 @@ const jobSchema = z.object({
   frequency: z.string().min(1, 'Select a frequency'),
   scheduled_date: z.string().min(1, 'Start date is required'),
   end_date: z.string().optional(),
-  scheduled_time_start: z.string().min(1, 'Start time is required'),
+  scheduled_time_start: z.string().optional(),
   scheduled_time_end: z.string().optional(),
   estimated_price: z.string().min(1, 'Price is required'),
   notes: z.string().optional(),
@@ -170,7 +170,7 @@ export default function JobForm() {
 
         {/* Time */}
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Start Time" error={errors.scheduled_time_start?.message}>
+          <Field label="Start Time" optional>
             <input {...register('scheduled_time_start')} type="time" className={inputClass} />
           </Field>
           {(isEditing || frequency === 'one_time') && (

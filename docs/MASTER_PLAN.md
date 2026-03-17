@@ -11,7 +11,7 @@ This is the index for the feature expansion. Each phase has its own detailed spe
 
 | Phase | Name | Key Deliverables | Status |
 |-------|------|-----------------|--------|
-| 1 | Database Migrations | New tables + altered columns for all features | NOT STARTED |
+| 1 | Database Migrations | New tables + altered columns for all features | COMPLETE |
 | 2 | Documents Hub | Consolidate Quotes/Invoices/Contracts into one nav item | NOT STARTED |
 | 3 | Job Rescheduling & Rain Day | Reschedule individual jobs + bulk rain day button | NOT STARTED |
 | 4 | Customer Enhancements | Service day, communication log, past documents tab | NOT STARTED |

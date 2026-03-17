@@ -14,6 +14,82 @@ export type Database = {
   }
   public: {
     Tables: {
+      contracts: {
+        Row: {
+          contract_date: string
+          contract_number: string
+          created_at: string
+          customer_id: string | null
+          id: string
+          services: string
+          status: string
+          storage_path: string | null
+          terms: string | null
+          total: number
+        }
+        Insert: {
+          contract_date: string
+          contract_number: string
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          services: string
+          status?: string
+          storage_path?: string | null
+          terms?: string | null
+          total: number
+        }
+        Update: {
+          contract_date?: string
+          contract_number?: string
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          services?: string
+          status?: string
+          storage_path?: string | null
+          terms?: string | null
+          total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contracts_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_communications: {
+        Row: {
+          created_at: string
+          customer_id: string
+          id: string
+          note: string
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          id?: string
+          note: string
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          id?: string
+          note?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_communications_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           auth_user_id: string | null
@@ -31,6 +107,8 @@ export type Database = {
           property_size: string | null
           property_state: string | null
           property_zip: string | null
+          service_day: string | null
+          service_frequency: string | null
           tags: string[] | null
           updated_at: string | null
         }
@@ -50,6 +128,8 @@ export type Database = {
           property_size?: string | null
           property_state?: string | null
           property_zip?: string | null
+          service_day?: string | null
+          service_frequency?: string | null
           tags?: string[] | null
           updated_at?: string | null
         }
@@ -69,10 +149,122 @@ export type Database = {
           property_size?: string | null
           property_state?: string | null
           property_zip?: string | null
+          service_day?: string | null
+          service_frequency?: string | null
           tags?: string[] | null
           updated_at?: string | null
         }
         Relationships: []
+      }
+      equipment: {
+        Row: {
+          created_at: string
+          hours: number | null
+          id: string
+          name: string
+          notes: string | null
+          purchase_date: string | null
+          type: string
+          warranty_expiry: string | null
+        }
+        Insert: {
+          created_at?: string
+          hours?: number | null
+          id?: string
+          name: string
+          notes?: string | null
+          purchase_date?: string | null
+          type: string
+          warranty_expiry?: string | null
+        }
+        Update: {
+          created_at?: string
+          hours?: number | null
+          id?: string
+          name?: string
+          notes?: string | null
+          purchase_date?: string | null
+          type?: string
+          warranty_expiry?: string | null
+        }
+        Relationships: []
+      }
+      expenses: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string
+          date: string
+          id: string
+          notes: string | null
+          receipt_path: string | null
+          vendor: string | null
+        }
+        Insert: {
+          amount: number
+          category: string
+          created_at?: string
+          date: string
+          id?: string
+          notes?: string | null
+          receipt_path?: string | null
+          vendor?: string | null
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string
+          date?: string
+          id?: string
+          notes?: string | null
+          receipt_path?: string | null
+          vendor?: string | null
+        }
+        Relationships: []
+      }
+      follow_up_reminders: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          customer_id: string | null
+          id: string
+          is_completed: boolean
+          note: string
+          prospect_name: string | null
+          prospect_phone: string | null
+          reminder_date: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          is_completed?: boolean
+          note: string
+          prospect_name?: string | null
+          prospect_phone?: string | null
+          reminder_date: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          is_completed?: boolean
+          note?: string
+          prospect_name?: string | null
+          prospect_phone?: string | null
+          reminder_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "follow_up_reminders_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       invoices: {
         Row: {
@@ -89,6 +281,9 @@ export type Database = {
           paid_at: string | null
           payment_method: string | null
           payment_status: string
+          sms_sent_at: string | null
+          stripe_checkout_session_id: string | null
+          stripe_checkout_url: string | null
           stripe_payment_intent_id: string | null
           stripe_payment_status: string | null
           subtotal: number
@@ -110,6 +305,9 @@ export type Database = {
           paid_at?: string | null
           payment_method?: string | null
           payment_status?: string
+          sms_sent_at?: string | null
+          stripe_checkout_session_id?: string | null
+          stripe_checkout_url?: string | null
           stripe_payment_intent_id?: string | null
           stripe_payment_status?: string | null
           subtotal: number
@@ -131,6 +329,9 @@ export type Database = {
           paid_at?: string | null
           payment_method?: string | null
           payment_status?: string
+          sms_sent_at?: string | null
+          stripe_checkout_session_id?: string | null
+          stripe_checkout_url?: string | null
           stripe_payment_intent_id?: string | null
           stripe_payment_status?: string | null
           subtotal?: number
@@ -167,8 +368,11 @@ export type Database = {
           deleted_at: string | null
           estimated_price: number | null
           id: string
+          is_rescheduled: boolean
+          job_type: string
           last_sync_attempt: string | null
           notes: string | null
+          original_date: string | null
           recurring_schedule_id: string | null
           scheduled_date: string
           scheduled_time_end: string | null
@@ -189,8 +393,11 @@ export type Database = {
           deleted_at?: string | null
           estimated_price?: number | null
           id?: string
+          is_rescheduled?: boolean
+          job_type?: string
           last_sync_attempt?: string | null
           notes?: string | null
+          original_date?: string | null
           recurring_schedule_id?: string | null
           scheduled_date: string
           scheduled_time_end?: string | null
@@ -211,8 +418,11 @@ export type Database = {
           deleted_at?: string | null
           estimated_price?: number | null
           id?: string
+          is_rescheduled?: boolean
+          job_type?: string
           last_sync_attempt?: string | null
           notes?: string | null
+          original_date?: string | null
           recurring_schedule_id?: string | null
           scheduled_date?: string
           scheduled_time_end?: string | null
@@ -235,6 +445,50 @@ export type Database = {
             columns: ["recurring_schedule_id"]
             isOneToOne: false
             referencedRelation: "recurring_schedules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      maintenance_log: {
+        Row: {
+          cost: number | null
+          created_at: string
+          date: string
+          equipment_id: string
+          id: string
+          next_due_date: string | null
+          next_due_hours: number | null
+          notes: string | null
+          type: string
+        }
+        Insert: {
+          cost?: number | null
+          created_at?: string
+          date: string
+          equipment_id: string
+          id?: string
+          next_due_date?: string | null
+          next_due_hours?: number | null
+          notes?: string | null
+          type: string
+        }
+        Update: {
+          cost?: number | null
+          created_at?: string
+          date?: string
+          equipment_id?: string
+          id?: string
+          next_due_date?: string | null
+          next_due_hours?: number | null
+          notes?: string | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "maintenance_log_equipment_id_fkey"
+            columns: ["equipment_id"]
+            isOneToOne: false
+            referencedRelation: "equipment"
             referencedColumns: ["id"]
           },
         ]
@@ -463,6 +717,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      seasonal_messages: {
+        Row: {
+          body: string
+          category: string
+          created_at: string
+          id: string
+          name: string
+          subject: string
+        }
+        Insert: {
+          body: string
+          category: string
+          created_at?: string
+          id?: string
+          name: string
+          subject: string
+        }
+        Update: {
+          body?: string
+          category?: string
+          created_at?: string
+          id?: string
+          name?: string
+          subject?: string
+        }
+        Relationships: []
       }
     }
     Views: {
