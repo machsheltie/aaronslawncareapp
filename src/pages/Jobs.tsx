@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useJobs, useUpdateJob, useDeleteJob, SERVICE_TYPES, STATUS_OPTIONS } from '@/hooks/useJobs'
+import { useJobs, useUpdateJob, useDeleteJob, SERVICE_TYPES, STATUS_OPTIONS, getServiceLabels } from '@/hooks/useJobs'
 import type { JobWithCustomer } from '@/hooks/useJobs'
 
 function getToday() {
@@ -107,7 +107,7 @@ export default function Jobs() {
       {jobs && jobs.length > 0 && (
         <div className="space-y-3">
           {jobs.map((job) => {
-            const serviceLabel = SERVICE_TYPES.find(s => s.value === job.service_type)?.label ?? job.service_type
+            const serviceLabel = getServiceLabels(job.service_type)
             const statusInfo = STATUS_OPTIONS.find(s => s.value === job.status)
 
             return (

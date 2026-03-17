@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useCustomers } from '@/hooks/useCustomers'
-import { useJobs, useRainDay, SERVICE_TYPES, STATUS_OPTIONS } from '@/hooks/useJobs'
+import { useJobs, useRainDay, SERVICE_TYPES, STATUS_OPTIONS, getServiceLabels } from '@/hooks/useJobs'
 import { useTodayReminders, useCompleteReminder } from '@/hooks/useReminders'
 import FollowUpForm from '@/components/FollowUpForm'
 import { useGenerateUpcomingJobs } from '@/hooks/useRecurringSchedules'
@@ -224,7 +224,7 @@ function StatCard({ label, value, to }: { label: string; value: string; to: stri
 }
 
 function JobRow({ job }: { job: JobWithCustomer }) {
-  const serviceLabel = SERVICE_TYPES.find(s => s.value === job.service_type)?.label ?? job.service_type
+  const serviceLabel = getServiceLabels(job.service_type)
   const statusInfo = STATUS_OPTIONS.find(s => s.value === job.status)
 
   return (

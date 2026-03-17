@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
-import { useJob, useUpdateJob, useDeleteJob, useRescheduleJob, SERVICE_TYPES, STATUS_OPTIONS } from '@/hooks/useJobs'
+import { useJob, useUpdateJob, useDeleteJob, useRescheduleJob, SERVICE_TYPES, STATUS_OPTIONS, getServiceLabels } from '@/hooks/useJobs'
 import JobPhotos from '@/components/photos/JobPhotos'
 
 export default function JobDetail() {
@@ -46,7 +46,7 @@ export default function JobDetail() {
     )
   }
 
-  const serviceLabel = SERVICE_TYPES.find(s => s.value === job.service_type)?.label ?? job.service_type
+  const serviceLabel = getServiceLabels(job.service_type)
   const statusInfo = STATUS_OPTIONS.find(s => s.value === job.status)
 
   return (

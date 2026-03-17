@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
 import { useCustomer, useDeleteCustomer } from '@/hooks/useCustomers'
 import { useCustomerPhotos, getPhotoUrl, PHOTO_TYPES } from '@/hooks/usePhotos'
-import { SERVICE_TYPES, useJobs } from '@/hooks/useJobs'
+import { SERVICE_TYPES, useJobs, getServiceLabels } from '@/hooks/useJobs'
 import { useCustomerComms, useAddComm, useDeleteComm } from '@/hooks/useCustomerComms'
 import { useInvoices, PAYMENT_STATUS_OPTIONS } from '@/hooks/useInvoices'
 import FollowUpForm from '@/components/FollowUpForm'
@@ -141,8 +141,7 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 function ServiceHistory({ customerId }: { customerId: string }) {
   const { data: jobs, isLoading } = useJobs({ customerId })
 
-  const serviceLabel = (val: string) =>
-    SERVICE_TYPES.find((s) => s.value === val)?.label ?? val
+  const serviceLabel = (val: string) => getServiceLabels(val)
 
   if (isLoading) {
     return (

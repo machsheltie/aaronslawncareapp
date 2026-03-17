@@ -208,6 +208,31 @@ export const SERVICE_TYPES = [
   { value: 'snow_removal', label: 'Snow Removal' },
 ] as const
 
+/** Equipment needed per service type — Aaron's checklist */
+export const SERVICE_EQUIPMENT: Record<string, string[]> = {
+  mowing: ['Push mower', 'Riding mower', 'Gas can', 'Ear protection', 'Trimmer line'],
+  edging: ['Edger', 'Gas can', 'Safety glasses', 'Ear protection'],
+  leaf_removal: ['Leaf blower', 'Rakes', 'Tarps', 'Trash bags', 'Ear protection'],
+  aeration: ['Aerator', 'Flags/markers'],
+  landscaping: ['Shovels', 'Wheelbarrow', 'Gloves', 'Landscape fabric', 'Stakes'],
+  garden_bed_design: ['Shovels', 'Rake', 'Wheelbarrow', 'Edging material', 'Mulch', 'Gloves'],
+  hedge_trimming: ['Hedge trimmer', 'Ladder', 'Tarps', 'Safety glasses', 'Ear protection'],
+  tree_removal: ['Chainsaw', 'Pole saw', 'Ropes', 'Ladder', 'Safety glasses', 'Ear protection', 'Chaps', 'Hard hat'],
+  tilling: ['Tiller', 'Rake', 'Gas can', 'Gloves'],
+  snow_removal: ['Snow blower', 'Snow shovel', 'Ice melt/salt', 'Gloves'],
+}
+
+/** Parse comma-separated service_type string into array */
+export function parseServiceTypes(serviceType: string): string[] {
+  return serviceType.split(',').map(s => s.trim()).filter(Boolean)
+}
+
+/** Get label(s) for a potentially multi-value service_type */
+export function getServiceLabels(serviceType: string): string {
+  const types = parseServiceTypes(serviceType)
+  return types.map(t => SERVICE_TYPES.find(s => s.value === t)?.label ?? t).join(', ')
+}
+
 export const STATUS_OPTIONS = [
   { value: 'scheduled', label: 'Scheduled', color: 'bg-blue-100 text-blue-700' },
   { value: 'in_progress', label: 'In Progress', color: 'bg-yellow-100 text-yellow-700' },

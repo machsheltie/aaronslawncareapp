@@ -47,12 +47,12 @@ Mark tasks `[x]` as they are completed. After completing a task, check the next 
 - [x] 5.7 Build check
 
 ## Phase 6: Quote Scheduling
-- [ ] 6.1 Add job_type toggle to JobForm.tsx (service vs quote_visit)
-- [ ] 6.2 Relax required fields for quote_visit in JobForm
-- [ ] 6.3 Different completion flow in MyDay for quote_visit jobs
-- [ ] 6.4 "Finish Quote & Add to Schedule" flow (create customer + job)
-- [ ] 6.5 Add customer selector to Quote Generator (Quotes.jsx)
-- [ ] 6.6 Build check
+- [x] 6.1 Add job_type toggle to JobForm.tsx (service vs quote_visit)
+- [x] 6.2 Relax required fields for quote_visit in JobForm
+- [x] 6.3 Different completion flow in MyDay for quote_visit jobs
+- [x] 6.4 "Finish Quote & Add to Schedule" flow (create customer + job)
+- [ ] 6.5 Add customer selector to Quote Generator (Quotes.jsx) — deferred (standalone file)
+- [x] 6.6 Build check
 
 ## Phase 7: Dashboard Expansion
 - [ ] 7.1 Create useEquipment.ts hook
