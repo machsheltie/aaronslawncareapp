@@ -137,7 +137,9 @@ export default function Dashboard() {
             {reminders.filter(r => !r.is_completed).map((rem) => {
               const today = new Date().toISOString().split('T')[0]
               const isOverdue = rem.reminder_date < today
+              const isUpcoming = rem.reminder_date > today
               const name = rem.customers?.name ?? rem.prospect_name ?? 'Unknown'
+              const dateLabel = new Date(rem.reminder_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
               return (
                 <div
                   key={rem.id}
@@ -157,6 +159,16 @@ export default function Dashboard() {
                       {isOverdue && (
                         <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-500 text-white font-medium">
                           Overdue
+                        </span>
+                      )}
+                      {isUpcoming && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 font-medium">
+                          {dateLabel}
+                        </span>
+                      )}
+                      {!isOverdue && !isUpcoming && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-yellow-100 text-yellow-700 font-medium">
+                          Today
                         </span>
                       )}
                     </div>

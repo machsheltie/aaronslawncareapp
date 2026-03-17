@@ -13,19 +13,18 @@ function getToday() {
   return new Date().toISOString().split('T')[0]
 }
 
-/** Fetch reminders due today or overdue (incomplete) + completed today */
+/** Fetch all incomplete reminders (overdue, today, and upcoming) + completed today */
 export function useTodayReminders() {
   const today = getToday()
 
   return useQuery({
     queryKey: ['reminders', 'today', today],
     queryFn: async () => {
-      // Get incomplete reminders due today or earlier (overdue)
+      // Get all incomplete reminders (overdue + today + upcoming)
       const { data: pending, error: e1 } = await supabase
         .from('follow_up_reminders')
         .select('*, customers(name, phone)')
         .eq('is_completed', false)
-        .lte('reminder_date', today)
         .order('reminder_date', { ascending: true })
       if (e1) throw e1
 
