@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useJobs, useUpdateJob, useRescheduleJob, useRainDay, SERVICE_TYPES, getFullAddress } from '@/hooks/useJobs'
+import { useTodayReminders, useCompleteReminder } from '@/hooks/useReminders'
+import FollowUpForm from '@/components/FollowUpForm'
 import { useUploadPhoto } from '@/hooks/usePhotos'
 import { useCreateInvoice, useSendInvoiceSms } from '@/hooks/useInvoices'
 import { useGenerateUpcomingJobs } from '@/hooks/useRecurringSchedules'
@@ -35,6 +37,10 @@ export default function MyDay() {
   const [rainDayDate, setRainDayDate] = useState('')
   const [rescheduleJobId, setRescheduleJobId] = useState<string | null>(null)
   const [rescheduleDate, setRescheduleDate] = useState('')
+  const [showFollowUp, setShowFollowUp] = useState(false)
+
+  const { data: reminders } = useTodayReminders()
+  const completeReminder = useCompleteReminder()
   const [routeOrder, setRouteOrder] = useState<string[]>([])
   const [totalMiles, setTotalMiles] = useState<number | null>(null)
   const [optimizing, setOptimizing] = useState(false)
@@ -270,19 +276,27 @@ export default function MyDay() {
               {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
             </p>
           </div>
-          {totalCount > 0 && sortedJobs.some(j => j.status === 'scheduled') && (
+          <div className="flex gap-2">
             <button
-              onClick={() => {
-                const tomorrow = new Date()
-                tomorrow.setDate(tomorrow.getDate() + 1)
-                setRainDayDate(tomorrow.toISOString().split('T')[0])
-                setShowRainDay(true)
-              }}
-              className="bg-blue-100 text-blue-700 px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-200 transition-colors"
+              onClick={() => setShowFollowUp(true)}
+              className="bg-orange-100 text-orange-700 px-3 py-2 rounded-md text-sm font-medium hover:bg-orange-200 transition-colors"
             >
-              Rain Day
+              + Follow-Up
             </button>
-          )}
+            {totalCount > 0 && sortedJobs.some(j => j.status === 'scheduled') && (
+              <button
+                onClick={() => {
+                  const tomorrow = new Date()
+                  tomorrow.setDate(tomorrow.getDate() + 1)
+                  setRainDayDate(tomorrow.toISOString().split('T')[0])
+                  setShowRainDay(true)
+                }}
+                className="bg-blue-100 text-blue-700 px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-200 transition-colors"
+              >
+                Rain Day
+              </button>
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-3 mt-2">
           <span className="text-sm font-medium text-gray-600">
@@ -389,6 +403,52 @@ export default function MyDay() {
           </div>
         </div>
       )}
+
+      {/* Follow-Up Reminders */}
+      {reminders && reminders.filter(r => !r.is_completed).length > 0 && (
+        <div className="mb-4 space-y-2">
+          <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Follow-Ups</h3>
+          {reminders.filter(r => !r.is_completed).map((rem) => {
+            const isOverdue = rem.reminder_date < getToday()
+            const name = rem.customers?.name ?? rem.prospect_name ?? 'Unknown'
+            return (
+              <div
+                key={rem.id}
+                className="flex items-start gap-3 rounded-lg border-l-4 border-orange-400 bg-orange-50 p-3"
+              >
+                <button
+                  onClick={() => completeReminder.mutate(rem.id)}
+                  className="mt-0.5 w-5 h-5 rounded border-2 border-orange-400 flex-shrink-0 hover:bg-orange-200 transition-colors"
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-semibold text-gray-800">{name}</p>
+                    {isOverdue && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-500 text-white font-medium">
+                        Overdue
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm text-gray-600">{rem.note}</p>
+                  {rem.customers?.phone && (
+                    <a href={`tel:${rem.customers.phone}`} className="text-xs text-blue-600 hover:underline">
+                      {rem.customers.phone}
+                    </a>
+                  )}
+                  {rem.prospect_phone && !rem.customers && (
+                    <a href={`tel:${rem.prospect_phone}`} className="text-xs text-blue-600 hover:underline">
+                      {rem.prospect_phone}
+                    </a>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Follow-Up Form Modal */}
+      {showFollowUp && <FollowUpForm onClose={() => setShowFollowUp(false)} />}
 
       {/* No jobs */}
       {totalCount === 0 && (
@@ -595,6 +655,26 @@ export default function MyDay() {
           )
         })}
       </div>
+
+      {/* Completed Reminders */}
+      {reminders && reminders.filter(r => r.is_completed).length > 0 && (
+        <div className="mt-4 space-y-2 opacity-50">
+          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Completed Follow-Ups</h3>
+          {reminders.filter(r => r.is_completed).map((rem) => (
+            <div key={rem.id} className="flex items-start gap-3 rounded-lg border-l-4 border-green-300 bg-green-50 p-3">
+              <span className="mt-0.5 w-5 h-5 rounded border-2 border-green-400 bg-green-400 flex-shrink-0 flex items-center justify-center text-white text-xs">
+                &#10003;
+              </span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-gray-600 line-through">
+                  {rem.customers?.name ?? rem.prospect_name ?? 'Unknown'}
+                </p>
+                <p className="text-sm text-gray-400">{rem.note}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* All done message */}
       {totalCount > 0 && completedCount === totalCount && (

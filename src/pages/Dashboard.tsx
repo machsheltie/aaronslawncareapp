@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useCustomers } from '@/hooks/useCustomers'
 import { useJobs, useRainDay, SERVICE_TYPES, STATUS_OPTIONS } from '@/hooks/useJobs'
+import { useTodayReminders, useCompleteReminder } from '@/hooks/useReminders'
+import FollowUpForm from '@/components/FollowUpForm'
 import { useGenerateUpcomingJobs } from '@/hooks/useRecurringSchedules'
 import { useInvoices } from '@/hooks/useInvoices'
 import type { JobWithCustomer } from '@/hooks/useJobs'
@@ -35,6 +37,10 @@ export default function Dashboard() {
   const rainDay = useRainDay()
   const [showRainDay, setShowRainDay] = useState(false)
   const [rainDayDate, setRainDayDate] = useState('')
+
+  const { data: reminders } = useTodayReminders()
+  const completeReminder = useCompleteReminder()
+  const [showFollowUp, setShowFollowUp] = useState(false)
 
   const scheduledCount = allJobs?.filter(j => j.status === 'scheduled').length ?? 0
   const inProgressCount = allJobs?.filter(j => j.status === 'in_progress').length ?? 0
@@ -71,6 +77,59 @@ export default function Dashboard() {
           <span className="text-gray-400 text-xl">&rsaquo;</span>
         </div>
       </Link>
+
+      {/* Follow-Up Reminders */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-lg font-semibold text-gray-800">Follow-Ups</h3>
+          <button
+            onClick={() => setShowFollowUp(true)}
+            className="text-sm text-brand-green hover:text-brand-accent font-medium"
+          >
+            + Schedule Follow-Up
+          </button>
+        </div>
+
+        {showFollowUp && <FollowUpForm onClose={() => setShowFollowUp(false)} />}
+
+        {reminders && reminders.filter(r => !r.is_completed).length === 0 && (
+          <div className="rounded-lg border border-green-200 p-4 text-center text-gray-500 text-sm" style={{ backgroundColor: '#c0efbf' }}>
+            No pending follow-ups.
+          </div>
+        )}
+
+        {reminders && reminders.filter(r => !r.is_completed).length > 0 && (
+          <div className="space-y-2">
+            {reminders.filter(r => !r.is_completed).map((rem) => {
+              const today = new Date().toISOString().split('T')[0]
+              const isOverdue = rem.reminder_date < today
+              const name = rem.customers?.name ?? rem.prospect_name ?? 'Unknown'
+              return (
+                <div
+                  key={rem.id}
+                  className="flex items-start gap-3 rounded-lg border-l-4 border-orange-400 bg-orange-50 p-3"
+                >
+                  <button
+                    onClick={() => completeReminder.mutate(rem.id)}
+                    className="mt-0.5 w-5 h-5 rounded border-2 border-orange-400 flex-shrink-0 hover:bg-orange-200 transition-colors"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-semibold text-gray-800">{name}</p>
+                      {isOverdue && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-500 text-white font-medium">
+                          Overdue
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-600">{rem.note}</p>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
 
       {/* Today's Jobs */}
       <div className="mb-8">

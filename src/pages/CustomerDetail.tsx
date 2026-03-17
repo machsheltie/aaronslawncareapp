@@ -5,6 +5,7 @@ import { useCustomerPhotos, getPhotoUrl, PHOTO_TYPES } from '@/hooks/usePhotos'
 import { SERVICE_TYPES, useJobs } from '@/hooks/useJobs'
 import { useCustomerComms, useAddComm, useDeleteComm } from '@/hooks/useCustomerComms'
 import { useInvoices, PAYMENT_STATUS_OPTIONS } from '@/hooks/useInvoices'
+import FollowUpForm from '@/components/FollowUpForm'
 
 export default function CustomerDetail() {
   const { id } = useParams()
@@ -211,6 +212,7 @@ function CommsLog({ customerId }: { customerId: string }) {
   const addComm = useAddComm()
   const deleteComm = useDeleteComm()
   const [noteText, setNoteText] = useState('')
+  const [showFollowUp, setShowFollowUp] = useState(false)
 
   const handleAdd = () => {
     if (!noteText.trim()) return
@@ -231,7 +233,7 @@ function CommsLog({ customerId }: { customerId: string }) {
   return (
     <div>
       {/* Add note */}
-      <div className="flex gap-2 mb-4">
+      <div className="flex gap-2 mb-3">
         <input
           type="text"
           value={noteText}
@@ -248,6 +250,17 @@ function CommsLog({ customerId }: { customerId: string }) {
           Add
         </button>
       </div>
+
+      <button
+        onClick={() => setShowFollowUp(true)}
+        className="text-sm text-orange-600 hover:text-orange-700 font-medium mb-4 inline-block"
+      >
+        + Schedule Follow-Up
+      </button>
+
+      {showFollowUp && (
+        <FollowUpForm defaultCustomerId={customerId} onClose={() => setShowFollowUp(false)} />
+      )}
 
       {(!comms || comms.length === 0) && (
         <div className="text-center py-12 text-gray-500">

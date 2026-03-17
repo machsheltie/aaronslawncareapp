@@ -38,13 +38,13 @@ Mark tasks `[x]` as they are completed. After completing a task, check the next 
 - [x] 4.6 Build check
 
 ## Phase 5: Follow-Up Reminders
-- [ ] 5.1 Create useReminders.ts hook
-- [ ] 5.2 Create FollowUpForm.tsx component (modal with customer selector)
-- [ ] 5.3 Add reminders section to top of MyDay.tsx
-- [ ] 5.4 Add "Schedule Follow-Up" section to Dashboard.tsx
-- [ ] 5.5 Integrate follow-up button on Customer Detail Comms tab
-- [ ] 5.6 Handle overdue reminders (carry forward)
-- [ ] 5.7 Build check
+- [x] 5.1 Create useReminders.ts hook
+- [x] 5.2 Create FollowUpForm.tsx component (modal with customer selector)
+- [x] 5.3 Add reminders section to top of MyDay.tsx
+- [x] 5.4 Add "Schedule Follow-Up" section to Dashboard.tsx
+- [x] 5.5 Integrate follow-up button on Customer Detail Comms tab
+- [x] 5.6 Handle overdue reminders (carry forward)
+- [x] 5.7 Build check
 
 ## Phase 6: Quote Scheduling
 - [ ] 6.1 Add job_type toggle to JobForm.tsx (service vs quote_visit)
