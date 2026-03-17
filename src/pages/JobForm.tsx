@@ -46,6 +46,7 @@ export default function JobForm() {
   const isEditing = !!id
   const [jobType, setJobType] = useState<'service' | 'quote_visit'>('service')
   const [selectedServices, setSelectedServices] = useState<string[]>([])
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   const { data: job, isLoading: loadingJob } = useJob(id)
   const { data: customers } = useCustomers()
@@ -97,70 +98,75 @@ export default function JobForm() {
   }, [job, reset])
 
   const onSubmit = async (data: JobFormData) => {
-    if (isEditing && id) {
-      await updateJob.mutateAsync({
-        id,
-        customer_id: data.customer_id!,
-        service_type: data.service_type || 'mowing',
-        scheduled_date: data.scheduled_date,
-        scheduled_time_start: data.scheduled_time_start || null,
-        scheduled_time_end: data.scheduled_time_end || null,
-        estimated_price: data.estimated_price ? parseFloat(data.estimated_price) : null,
-        notes: data.notes || null,
-        customer_instructions: data.customer_instructions || null,
-        job_type: jobType,
-      })
+    setSubmitError(null)
+    try {
+      if (isEditing && id) {
+        await updateJob.mutateAsync({
+          id,
+          customer_id: data.customer_id || undefined,
+          service_type: data.service_type || 'mowing',
+          scheduled_date: data.scheduled_date,
+          scheduled_time_start: data.scheduled_time_start || null,
+          scheduled_time_end: data.scheduled_time_end || null,
+          estimated_price: data.estimated_price ? parseFloat(data.estimated_price) : null,
+          notes: data.notes || null,
+          customer_instructions: data.customer_instructions || null,
+          job_type: jobType,
+        })
+        navigate('/jobs')
+        return
+      }
+
+      if (jobType === 'quote_visit') {
+        const qd = data as QuoteVisitData
+        const noteParts = [qd.notes]
+        if (qd.prospect_name) noteParts.unshift(`Prospect: ${qd.prospect_name} | ${qd.prospect_phone}`)
+        if (qd.prospect_address) noteParts.unshift(`Address: ${qd.prospect_address}`)
+
+        await createJob.mutateAsync({
+          customer_id: qd.customer_id || '',
+          service_type: qd.service_type || 'mowing',
+          scheduled_date: qd.scheduled_date,
+          scheduled_time_start: qd.scheduled_time_start || null,
+          scheduled_time_end: qd.scheduled_time_end || null,
+          estimated_price: qd.estimated_price ? parseFloat(qd.estimated_price) : null,
+          notes: noteParts.filter(Boolean).join('\n') || null,
+          customer_instructions: qd.prospect_address || null,
+          job_type: 'quote_visit',
+        })
+        navigate('/jobs')
+        return
+      }
+
+      if (data.frequency === 'one_time') {
+        await createJob.mutateAsync({
+          customer_id: data.customer_id,
+          service_type: data.service_type || 'mowing',
+          scheduled_date: data.scheduled_date,
+          scheduled_time_start: data.scheduled_time_start || null,
+          scheduled_time_end: data.scheduled_time_end || null,
+          estimated_price: data.estimated_price ? parseFloat(data.estimated_price) : null,
+          notes: data.notes || null,
+          customer_instructions: data.customer_instructions || null,
+        })
+      } else {
+        await createSchedule.mutateAsync({
+          customer_id: data.customer_id,
+          service_type: data.service_type || 'mowing',
+          frequency: data.frequency,
+          start_date: data.scheduled_date,
+          end_date: data.end_date || null,
+          preferred_time: data.scheduled_time_start || null,
+          estimated_price: data.estimated_price ? parseFloat(data.estimated_price) : null,
+          notes: data.notes || null,
+          customer_instructions: data.customer_instructions || null,
+        })
+      }
       navigate('/jobs')
-      return
+    } catch (err: any) {
+      console.error('Job submit error:', err)
+      setSubmitError(err?.message || 'Failed to save job. Please try again.')
     }
-
-    if (jobType === 'quote_visit') {
-      const qd = data as QuoteVisitData
-      // For quote visits, store prospect info in notes if no customer selected
-      const noteParts = [qd.notes]
-      if (qd.prospect_name) noteParts.unshift(`Prospect: ${qd.prospect_name} | ${qd.prospect_phone}`)
-      if (qd.prospect_address) noteParts.unshift(`Address: ${qd.prospect_address}`)
-
-      await createJob.mutateAsync({
-        customer_id: qd.customer_id!,
-        service_type: qd.service_type || 'mowing',
-        scheduled_date: qd.scheduled_date,
-        scheduled_time_start: qd.scheduled_time_start || null,
-        scheduled_time_end: qd.scheduled_time_end || null,
-        estimated_price: qd.estimated_price ? parseFloat(qd.estimated_price) : null,
-        notes: noteParts.filter(Boolean).join('\n') || null,
-        customer_instructions: qd.prospect_address || null,
-        job_type: 'quote_visit',
-      })
-      navigate('/jobs')
-      return
-    }
-
-    if (data.frequency === 'one_time') {
-      await createJob.mutateAsync({
-        customer_id: data.customer_id!,
-        service_type: data.service_type!,
-        scheduled_date: data.scheduled_date,
-        scheduled_time_start: data.scheduled_time_start || null,
-        scheduled_time_end: data.scheduled_time_end || null,
-        estimated_price: data.estimated_price ? parseFloat(data.estimated_price) : null,
-        notes: data.notes || null,
-        customer_instructions: data.customer_instructions || null,
-      })
-    } else {
-      await createSchedule.mutateAsync({
-        customer_id: data.customer_id!,
-        service_type: data.service_type!,
-        frequency: data.frequency!,
-        start_date: data.scheduled_date,
-        end_date: data.end_date || null,
-        preferred_time: data.scheduled_time_start || null,
-        estimated_price: data.estimated_price ? parseFloat(data.estimated_price) : null,
-        notes: data.notes || null,
-        customer_instructions: data.customer_instructions || null,
-      })
-    }
-    navigate('/jobs')
   }
 
   if (isEditing && loadingJob) {
@@ -327,6 +333,13 @@ export default function JobForm() {
           <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded text-sm">
             This will create a recurring schedule and auto-generate jobs 4 weeks ahead.
             You can pause, skip, or cancel anytime from the Schedules tab.
+          </div>
+        )}
+
+        {/* Error */}
+        {submitError && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded text-sm">
+            {submitError}
           </div>
         )}
 
