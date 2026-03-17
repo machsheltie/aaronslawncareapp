@@ -14,7 +14,7 @@ This is the index for the feature expansion. Each phase has its own detailed spe
 | 1 | Database Migrations | New tables + altered columns for all features | COMPLETE |
 | 2 | Documents Hub | Consolidate Quotes/Invoices/Contracts into one nav item | COMPLETE |
 | 3 | Job Rescheduling & Rain Day | Reschedule individual jobs + bulk rain day button | COMPLETE |
-| 4 | Customer Enhancements | Service day, communication log, past documents tab | NOT STARTED |
+| 4 | Customer Enhancements | Service day, communication log, past documents tab | COMPLETE |
 | 5 | Follow-Up Reminders | Schedule reminders that pin to top of My Day | NOT STARTED |
 | 6 | Quote Scheduling for Prospects | Quote visits on schedule, convert to customer on win | NOT STARTED |
 | 7 | Dashboard Expansion | Equipment, Expenses, Seasonal Reminders sections | NOT STARTED |

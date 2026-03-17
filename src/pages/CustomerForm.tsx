@@ -14,6 +14,8 @@ const customerSchema = z.object({
   property_state: z.string().min(1, 'State is required'),
   property_zip: z.string().min(1, 'Zip is required'),
   property_size: z.string().min(1, 'Property size is required'),
+  service_day: z.string().optional(),
+  service_frequency: z.string().optional(),
   notes: z.string().optional(),
 })
 
@@ -53,6 +55,8 @@ export default function CustomerForm() {
         property_state: customer.property_state ?? 'KY',
         property_zip: customer.property_zip ?? '',
         property_size: (customer.property_size as CustomerFormData['property_size']) ?? undefined,
+        service_day: customer.service_day ?? '',
+        service_frequency: customer.service_frequency ?? '',
         notes: customer.notes ?? '',
       })
     }
@@ -62,6 +66,8 @@ export default function CustomerForm() {
     const payload = {
       ...data,
       email: data.email || null,
+      service_day: data.service_day || null,
+      service_frequency: data.service_frequency || null,
       notes: data.notes || null,
     }
 
@@ -137,6 +143,30 @@ export default function CustomerForm() {
             <option value="not_sure">Not Sure</option>
           </select>
         </Field>
+
+        {/* Service Day & Frequency */}
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Service Day" optional>
+            <select {...register('service_day')} className={inputClass}>
+              <option value="">Not set</option>
+              <option value="Monday">Monday</option>
+              <option value="Tuesday">Tuesday</option>
+              <option value="Wednesday">Wednesday</option>
+              <option value="Thursday">Thursday</option>
+              <option value="Friday">Friday</option>
+              <option value="Saturday">Saturday</option>
+            </select>
+          </Field>
+          <Field label="Frequency" optional>
+            <select {...register('service_frequency')} className={inputClass}>
+              <option value="">Not set</option>
+              <option value="weekly">Weekly</option>
+              <option value="biweekly">Biweekly</option>
+              <option value="monthly">Monthly</option>
+              <option value="one_time">One-time</option>
+            </select>
+          </Field>
+        </div>
 
         {/* Notes */}
         <Field label="Notes" optional>

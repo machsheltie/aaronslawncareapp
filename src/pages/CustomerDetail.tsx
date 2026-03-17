@@ -3,13 +3,15 @@ import { Link, useParams, useNavigate } from 'react-router-dom'
 import { useCustomer, useDeleteCustomer } from '@/hooks/useCustomers'
 import { useCustomerPhotos, getPhotoUrl, PHOTO_TYPES } from '@/hooks/usePhotos'
 import { SERVICE_TYPES, useJobs } from '@/hooks/useJobs'
+import { useCustomerComms, useAddComm, useDeleteComm } from '@/hooks/useCustomerComms'
+import { useInvoices, PAYMENT_STATUS_OPTIONS } from '@/hooks/useInvoices'
 
 export default function CustomerDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { data: customer, isLoading, error } = useCustomer(id)
   const deleteCustomer = useDeleteCustomer()
-  const [activeTab, setActiveTab] = useState<'info' | 'history' | 'photos'>('info')
+  const [activeTab, setActiveTab] = useState<'info' | 'history' | 'comms' | 'docs' | 'photos'>('info')
 
   const handleDelete = () => {
     if (customer && confirm(`Delete customer "${customer.name}"?`)) {
@@ -63,37 +65,20 @@ export default function CustomerDetail() {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-gray-200 mb-6">
-        <button
-          onClick={() => setActiveTab('info')}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-            activeTab === 'info'
-              ? 'border-brand-green text-brand-green'
-              : 'border-transparent text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          Info
-        </button>
-        <button
-          onClick={() => setActiveTab('history')}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-            activeTab === 'history'
-              ? 'border-brand-green text-brand-green'
-              : 'border-transparent text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          History
-        </button>
-        <button
-          onClick={() => setActiveTab('photos')}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-            activeTab === 'photos'
-              ? 'border-brand-green text-brand-green'
-              : 'border-transparent text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          Photos
-        </button>
+      <div className="flex border-b border-gray-200 mb-6 overflow-x-auto">
+        {(['info', 'history', 'comms', 'docs', 'photos'] as const).map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+              activeTab === tab
+                ? 'border-brand-green text-brand-green'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            {tab === 'info' ? 'Info' : tab === 'history' ? 'History' : tab === 'comms' ? 'Comms' : tab === 'docs' ? 'Docs' : 'Photos'}
+          </button>
+        ))}
       </div>
 
       {activeTab === 'info' && (
@@ -106,6 +91,8 @@ export default function CustomerDetail() {
           <Section title="Property">
             <InfoRow label="Address" value={`${customer.property_address}, ${customer.property_city} ${customer.property_state} ${customer.property_zip ?? ''}`} />
             <InfoRow label="Size" value={customer.property_size ? customer.property_size.replace('_', ' ') : '—'} />
+            {customer.service_day && <InfoRow label="Service Day" value={customer.service_day} />}
+            {customer.service_frequency && <InfoRow label="Frequency" value={customer.service_frequency.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())} />}
           </Section>
 
           {customer.notes && (
@@ -122,6 +109,10 @@ export default function CustomerDetail() {
       )}
 
       {activeTab === 'history' && <ServiceHistory customerId={customer.id} />}
+
+      {activeTab === 'comms' && <CommsLog customerId={customer.id} />}
+
+      {activeTab === 'docs' && <CustomerDocs customerId={customer.id} />}
 
       {activeTab === 'photos' && <PhotoGallery customerId={customer.id} />}
     </div>
@@ -208,6 +199,141 @@ function ServiceHistory({ customerId }: { customerId: string }) {
             {notes && (
               <p className="text-xs text-gray-500 mt-2 line-clamp-2">{notes}</p>
             )}
+          </Link>
+        )
+      })}
+    </div>
+  )
+}
+
+function CommsLog({ customerId }: { customerId: string }) {
+  const { data: comms, isLoading } = useCustomerComms(customerId)
+  const addComm = useAddComm()
+  const deleteComm = useDeleteComm()
+  const [noteText, setNoteText] = useState('')
+
+  const handleAdd = () => {
+    if (!noteText.trim()) return
+    addComm.mutate(
+      { customer_id: customerId, note: noteText.trim() },
+      { onSuccess: () => setNoteText('') }
+    )
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-green" />
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      {/* Add note */}
+      <div className="flex gap-2 mb-4">
+        <input
+          type="text"
+          value={noteText}
+          onChange={(e) => setNoteText(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
+          placeholder="Add a note..."
+          className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-brand-green"
+        />
+        <button
+          onClick={handleAdd}
+          disabled={addComm.isPending || !noteText.trim()}
+          className="bg-brand-green text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-brand-accent transition-colors disabled:opacity-50"
+        >
+          Add
+        </button>
+      </div>
+
+      {(!comms || comms.length === 0) && (
+        <div className="text-center py-12 text-gray-500">
+          <p className="text-lg mb-1">No notes yet</p>
+          <p className="text-sm">Add communication notes for this customer.</p>
+        </div>
+      )}
+
+      {comms && comms.length > 0 && (
+        <div className="space-y-2">
+          {comms.map((comm) => (
+            <div
+              key={comm.id}
+              className="bg-white rounded-lg border border-gray-100 p-3 flex items-start justify-between"
+            >
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-gray-800">{comm.note}</p>
+                <p className="text-xs text-gray-400 mt-1">
+                  {comm.comm_date
+                    ? new Date(comm.comm_date).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit',
+                      })
+                    : '—'}
+                </p>
+              </div>
+              <button
+                onClick={() => deleteComm.mutate({ id: comm.id, customerId })}
+                className="text-gray-300 hover:text-red-500 ml-2 text-lg leading-none"
+              >
+                &times;
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function CustomerDocs({ customerId }: { customerId: string }) {
+  const { data: invoices, isLoading } = useInvoices({ customerId })
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-green" />
+      </div>
+    )
+  }
+
+  if (!invoices || invoices.length === 0) {
+    return (
+      <div className="text-center py-12 text-gray-500">
+        <p className="text-lg mb-1">No documents yet</p>
+        <p className="text-sm">Invoices for this customer will appear here.</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-2">
+      {invoices.map((inv) => {
+        const statusInfo = PAYMENT_STATUS_OPTIONS.find(s => s.value === inv.payment_status)
+        return (
+          <Link
+            key={inv.id}
+            to={`/documents/invoices/${inv.id}`}
+            className="flex items-center justify-between bg-white rounded-lg border border-gray-100 p-3 hover:shadow-sm transition-shadow"
+          >
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 mb-0.5">
+                <span className="text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-medium">Invoice</span>
+                <span className="text-sm font-semibold text-gray-800">{inv.invoice_number}</span>
+                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusInfo?.color ?? ''}`}>
+                  {statusInfo?.label ?? inv.payment_status}
+                </span>
+              </div>
+              <p className="text-xs text-gray-500">
+                {new Date(inv.invoice_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              </p>
+            </div>
+            <span className="text-sm font-bold text-gray-800 ml-4">${Number(inv.total).toFixed(2)}</span>
           </Link>
         )
       })}

@@ -30,12 +30,12 @@ Mark tasks `[x]` as they are completed. After completing a task, check the next 
 - [x] 3.7 Build check
 
 ## Phase 4: Customer Enhancements
-- [ ] 4.1 Add service_day + service_frequency to CustomerForm.tsx
-- [ ] 4.2 Show service day in CustomerDetail Info tab
-- [ ] 4.3 Create useCustomerComms.ts hook
-- [ ] 4.4 Add Comms tab to CustomerDetail.tsx
-- [ ] 4.5 Add Docs tab to CustomerDetail.tsx (invoices for now)
-- [ ] 4.6 Build check
+- [x] 4.1 Add service_day + service_frequency to CustomerForm.tsx
+- [x] 4.2 Show service day in CustomerDetail Info tab
+- [x] 4.3 Create useCustomerComms.ts hook
+- [x] 4.4 Add Comms tab to CustomerDetail.tsx
+- [x] 4.5 Add Docs tab to CustomerDetail.tsx (invoices for now)
+- [x] 4.6 Build check
 
 ## Phase 5: Follow-Up Reminders
 - [ ] 5.1 Create useReminders.ts hook
