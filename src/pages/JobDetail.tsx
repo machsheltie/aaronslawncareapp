@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
 import { useJob, useUpdateJob, useDeleteJob, SERVICE_TYPES, STATUS_OPTIONS } from '@/hooks/useJobs'
 import JobPhotos from '@/components/photos/JobPhotos'
@@ -8,6 +9,8 @@ export default function JobDetail() {
   const { data: job, isLoading, error } = useJob(id)
   const updateJob = useUpdateJob()
   const deleteJob = useDeleteJob()
+  const [editingNotes, setEditingNotes] = useState(false)
+  const [noteText, setNoteText] = useState('')
 
   const handleStatusChange = (newStatus: string) => {
     if (!job) return
@@ -144,13 +147,50 @@ export default function JobDetail() {
           </Section>
         )}
 
-        {(job.notes || job.customer_instructions || job.completion_notes) && (
-          <Section title="Notes">
-            {job.notes && <NoteBlock label="Job Notes" text={job.notes} />}
-            {job.customer_instructions && <NoteBlock label="Customer Instructions" text={job.customer_instructions} />}
-            {job.completion_notes && <NoteBlock label="Completion Notes" text={job.completion_notes} />}
-          </Section>
-        )}
+        <Section title="Notes">
+          {job.notes && <NoteBlock label="Job Notes" text={job.notes} />}
+          {job.customer_instructions && <NoteBlock label="Customer Instructions" text={job.customer_instructions} />}
+          {job.completion_notes && <NoteBlock label="Completion Notes" text={job.completion_notes} />}
+
+          {editingNotes ? (
+            <div className="mt-2">
+              <textarea
+                value={noteText}
+                onChange={(e) => setNoteText(e.target.value)}
+                rows={3}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-green"
+                placeholder="Add a note..."
+                autoFocus
+              />
+              <div className="flex gap-2 mt-2">
+                <button
+                  onClick={() => {
+                    updateJob.mutate(
+                      { id: job.id, notes: noteText || null },
+                      { onSuccess: () => setEditingNotes(false) }
+                    )
+                  }}
+                  className="px-3 py-1.5 bg-brand-green text-white text-sm rounded-md font-medium hover:bg-brand-accent transition-colors"
+                >
+                  Save
+                </button>
+                <button
+                  onClick={() => setEditingNotes(false)}
+                  className="px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => { setNoteText(job.notes ?? ''); setEditingNotes(true) }}
+              className="text-sm text-brand-green hover:underline mt-2"
+            >
+              {job.notes ? 'Edit note' : '+ Add note'}
+            </button>
+          )}
+        </Section>
 
         <JobPhotos jobId={job.id} />
       </div>

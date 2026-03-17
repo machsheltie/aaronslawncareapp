@@ -1,0 +1,75 @@
+# TODO Tracker — Feature Expansion
+
+**Last Updated:** 2026-03-17
+
+Mark tasks `[x]` as they are completed. After completing a task, check the next uncompleted task and begin work.
+
+---
+
+## Phase 1: Database Migrations
+- [ ] 1.1 Write SQL migration for all new tables (follow_up_reminders, customer_communications, expenses, equipment, maintenance_log, seasonal_messages, contracts)
+- [ ] 1.2 Write SQL migration for altered tables (customers: service_day + service_frequency, jobs: is_rescheduled + original_date + job_type)
+- [ ] 1.3 Apply migration via Supabase MCP
+- [ ] 1.4 Regenerate TypeScript types
+- [ ] 1.5 Verify existing app still works (build check)
+
+## Phase 2: Documents Hub
+- [ ] 2.1 Create Documents.tsx hub page with 3 cards
+- [ ] 2.2 Update AppLayout.tsx nav (replace Invoices + Quotes with Documents)
+- [ ] 2.3 Update App.tsx routes (nest quotes/invoices under /documents)
+- [ ] 2.4 Update all internal Link references across the app
+- [ ] 2.5 Build check + visual verify on mobile
+
+## Phase 3: Job Rescheduling & Rain Day
+- [ ] 3.1 Add useRescheduleJob hook to useJobs.ts
+- [ ] 3.2 Add useRainDay hook to useJobs.ts
+- [ ] 3.3 Add Reschedule button to JobDetail.tsx (with date picker)
+- [ ] 3.4 Add Rain Day button to MyDay.tsx
+- [ ] 3.5 Add Rain Day button to Dashboard.tsx (Today's Jobs section)
+- [ ] 3.6 Show rescheduled badge on job cards in MyDay and Jobs list
+- [ ] 3.7 Build check
+
+## Phase 4: Customer Enhancements
+- [ ] 4.1 Add service_day + service_frequency to CustomerForm.tsx
+- [ ] 4.2 Show service day in CustomerDetail Info tab
+- [ ] 4.3 Create useCustomerComms.ts hook
+- [ ] 4.4 Add Comms tab to CustomerDetail.tsx
+- [ ] 4.5 Add Docs tab to CustomerDetail.tsx (invoices for now)
+- [ ] 4.6 Build check
+
+## Phase 5: Follow-Up Reminders
+- [ ] 5.1 Create useReminders.ts hook
+- [ ] 5.2 Create FollowUpForm.tsx component (modal with customer selector)
+- [ ] 5.3 Add reminders section to top of MyDay.tsx
+- [ ] 5.4 Add "Schedule Follow-Up" section to Dashboard.tsx
+- [ ] 5.5 Integrate follow-up button on Customer Detail Comms tab
+- [ ] 5.6 Handle overdue reminders (carry forward)
+- [ ] 5.7 Build check
+
+## Phase 6: Quote Scheduling
+- [ ] 6.1 Add job_type toggle to JobForm.tsx (service vs quote_visit)
+- [ ] 6.2 Relax required fields for quote_visit in JobForm
+- [ ] 6.3 Different completion flow in MyDay for quote_visit jobs
+- [ ] 6.4 "Finish Quote & Add to Schedule" flow (create customer + job)
+- [ ] 6.5 Add customer selector to Quote Generator (Quotes.jsx)
+- [ ] 6.6 Build check
+
+## Phase 7: Dashboard Expansion
+- [ ] 7.1 Create useEquipment.ts hook
+- [ ] 7.2 Create Equipment.tsx, EquipmentDetail.tsx, EquipmentForm.tsx pages
+- [ ] 7.3 Create useExpenses.ts hook
+- [ ] 7.4 Create Expenses.tsx and ExpenseForm.tsx pages (with receipt upload)
+- [ ] 7.5 Create useSeasonalMessages.ts hook
+- [ ] 7.6 Create SeasonalReminders.tsx and SeasonalReminderForm.tsx pages
+- [ ] 7.7 Create send-seasonal-email edge function
+- [ ] 7.8 Add Equipment, Expenses, Seasonal Reminders section cards to Dashboard
+- [ ] 7.9 Add all new routes to App.tsx
+- [ ] 7.10 Build check
+
+## Phase 8: Contracts (BLOCKED)
+- [ ] 8.1 Receive contract template from Stacey
+- [ ] 8.2 Create useContracts.ts hook
+- [ ] 8.3 Create Contracts.tsx and ContractForm.tsx pages
+- [ ] 8.4 Create generateContractPdf.ts
+- [ ] 8.5 Update Documents hub to link to Contracts (remove "Coming Soon")
+- [ ] 8.6 Build check
