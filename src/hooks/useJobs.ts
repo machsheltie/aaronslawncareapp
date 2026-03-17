@@ -210,6 +210,7 @@ export const SERVICE_TYPES = [
   { value: 'weed_removal', label: 'Weed Removal' },
   { value: 'mulching', label: 'Mulching' },
   { value: 'seeding_grass', label: 'Seeding Grass' },
+  { value: 'french_drain', label: 'French Drain Installation' },
 ] as const
 
 /** Equipment needed per service type — Aaron's checklist */
@@ -228,6 +229,7 @@ export const SERVICE_EQUIPMENT: Record<string, string[]> = {
   weed_removal: ['Gloves', 'Weed puller', 'Knee pad', 'Trash bags', 'Herbicide'],
   mulching: ['Wheelbarrow', 'Shovels', 'Rake', 'Gloves', 'Mulch'],
   seeding_grass: ['Seed spreader', 'Grass seed', 'Rake', 'Topsoil', 'Straw/cover'],
+  french_drain: ['Shovels', 'Trencher', 'Gravel', 'Perforated pipe', 'Landscape fabric', 'Level', 'Wheelbarrow', 'Gloves', 'Safety glasses'],
 }
 
 /** Parse comma-separated service_type string into array */
