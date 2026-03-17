@@ -45,6 +45,8 @@ export default function MyDay() {
 
   const { data: reminders } = useTodayReminders()
   const completeReminder = useCompleteReminder()
+  const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set())
+  const [checklistExpanded, setChecklistExpanded] = useState(false)
   const [routeOrder, setRouteOrder] = useState<string[]>([])
   const [totalMiles, setTotalMiles] = useState<number | null>(null)
   const [optimizing, setOptimizing] = useState(false)
@@ -349,22 +351,73 @@ export default function MyDay() {
         // Service labels for the header
         const typeLabels = [...allTypes].map(t => SERVICE_TYPES.find(s => s.value === t)?.label ?? t)
 
+        const allChecked = equipmentList.every(item => checkedItems.has(item))
+        const COLLAPSED_COUNT = 4 // items per column when collapsed
+        const maxVisible = COLLAPSED_COUNT * 2 // 2 columns
+        const needsExpand = equipmentList.length > maxVisible
+        const visibleItems = checklistExpanded || !needsExpand ? equipmentList : equipmentList.slice(0, maxVisible)
+
         return (
-          <div className="mb-4 rounded-lg border-2 border-red-300 bg-red-50 p-4">
-            <h3 className="font-bold text-red-800 text-sm mb-1">
-              Before You Get Started
-            </h3>
-            <p className="text-xs text-red-600 mb-3">
+          <div className="mb-4 rounded-lg border-2 border-green-300 p-4" style={{ backgroundColor: '#dff7df' }}>
+            <div className="flex items-center justify-between mb-1">
+              <h3 className="font-bold text-sm" style={{ color: '#2D5016' }}>
+                Before You Get Started
+              </h3>
+              <button
+                type="button"
+                onClick={() => {
+                  if (allChecked) {
+                    setCheckedItems(new Set())
+                  } else {
+                    setCheckedItems(new Set(equipmentList))
+                  }
+                }}
+                className={`text-xs font-medium px-2.5 py-1 rounded-md transition-colors ${
+                  allChecked
+                    ? 'bg-green-600 text-white hover:bg-green-700'
+                    : 'text-white hover:opacity-90'
+                }`}
+                style={allChecked ? undefined : { backgroundColor: '#2D5016' }}
+              >
+                {allChecked ? 'Uncheck All' : 'Check All'}
+              </button>
+            </div>
+            <p className="text-xs mb-3" style={{ color: '#2D5016' }}>
               Today's jobs: {typeLabels.join(', ')}
             </p>
             <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-              {equipmentList.map(item => (
+              {visibleItems.map(item => (
                 <label key={item} className="flex items-center gap-2 text-sm text-gray-700">
-                  <input type="checkbox" className="w-4 h-4 rounded border-gray-300 text-brand-green focus:ring-brand-green" />
-                  {item}
+                  <input
+                    type="checkbox"
+                    checked={checkedItems.has(item)}
+                    onChange={() => {
+                      setCheckedItems(prev => {
+                        const next = new Set(prev)
+                        if (next.has(item)) next.delete(item)
+                        else next.add(item)
+                        return next
+                      })
+                    }}
+                    className="w-4 h-4 rounded border-gray-300 text-brand-green focus:ring-brand-green"
+                  />
+                  <span className={checkedItems.has(item) ? 'line-through text-gray-400' : ''}>{item}</span>
                 </label>
               ))}
             </div>
+            {needsExpand && (
+              <button
+                type="button"
+                onClick={() => setChecklistExpanded(prev => !prev)}
+                className="mt-2 text-xs font-medium hover:opacity-80"
+                style={{ color: '#2D5016' }}
+              >
+                {checklistExpanded ? `Show less` : `Show all ${equipmentList.length} items`}
+              </button>
+            )}
+            {allChecked && (
+              <p className="mt-2 text-xs font-semibold text-green-700">All loaded up — go get it!</p>
+            )}
           </div>
         )
       })()}
