@@ -141,11 +141,15 @@ export default function Dashboard() {
               return (
                 <div
                   key={rem.id}
-                  className="flex items-start gap-3 rounded-lg border-l-4 border-orange-400 bg-orange-50 p-3"
+                  className="flex items-start gap-3 rounded-lg border-l-4 p-3"
+                  style={{ borderColor: '#8B7355', backgroundColor: '#f8f3ed' }}
                 >
                   <button
                     onClick={() => completeReminder.mutate(rem.id)}
-                    className="mt-0.5 w-5 h-5 rounded border-2 border-orange-400 flex-shrink-0 hover:bg-orange-200 transition-colors"
+                    className="mt-0.5 w-5 h-5 rounded border-2 flex-shrink-0 transition-colors"
+                    style={{ borderColor: '#8B7355' }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#e5d6c4'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                   />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
@@ -178,7 +182,10 @@ export default function Dashboard() {
                   setRainDayDate(tomorrow.toISOString().split('T')[0])
                   setShowRainDay(true)
                 }}
-                className="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded-md font-medium hover:bg-blue-200 transition-colors"
+                className="text-sm px-3 py-1 rounded-md font-medium transition-colors"
+                style={{ backgroundColor: '#dff7df', color: '#2D5016' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#c0efbf'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#dff7df'}
               >
                 Rain Day
               </button>
@@ -191,13 +198,13 @@ export default function Dashboard() {
 
         {/* Rain Day Modal */}
         {showRainDay && (
-          <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4 mb-3">
-            <h3 className="font-semibold text-blue-800 mb-2">Rain Day — Move All Scheduled Jobs</h3>
+          <div className="border-2 border-green-300 rounded-lg p-4 mb-3" style={{ backgroundColor: '#dff7df' }}>
+            <h3 className="font-semibold mb-2" style={{ color: '#2D5016' }}>Rain Day — Move All Scheduled Jobs</h3>
             <input
               type="date"
               value={rainDayDate}
               onChange={(e) => setRainDayDate(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-brand-green"
             />
             <div className="flex gap-2">
               <button
@@ -216,7 +223,7 @@ export default function Dashboard() {
                   )
                 }}
                 disabled={rainDay.isPending}
-                className="flex-1 bg-blue-600 text-white py-2 rounded-md font-medium text-sm hover:bg-blue-700 transition-colors"
+                className="flex-1 bg-brand-green text-white py-2 rounded-md font-medium text-sm hover:bg-brand-accent transition-colors"
               >
                 {rainDay.isPending ? 'Moving...' : 'Move All Jobs'}
               </button>
