@@ -633,6 +633,56 @@ export type Database = {
           },
         ]
       }
+      quotes: {
+        Row: {
+          created_at: string
+          customer_address: string | null
+          customer_id: string | null
+          customer_name: string
+          id: string
+          items: Json
+          notes: string | null
+          quote_date: string
+          quote_number: string
+          status: string
+          total: number
+        }
+        Insert: {
+          created_at?: string
+          customer_address?: string | null
+          customer_id?: string | null
+          customer_name: string
+          id?: string
+          items: Json
+          notes?: string | null
+          quote_date: string
+          quote_number: string
+          status?: string
+          total: number
+        }
+        Update: {
+          created_at?: string
+          customer_address?: string | null
+          customer_id?: string | null
+          customer_name?: string
+          id?: string
+          items?: Json
+          notes?: string | null
+          quote_date?: string
+          quote_number?: string
+          status?: string
+          total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quotes_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       recurring_schedules: {
         Row: {
           created_at: string | null

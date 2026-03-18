@@ -1,4 +1,5 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
 
 const BRAND = {
   darkGreen: "#1B5E20",
@@ -314,7 +315,42 @@ const QuoteGenerator = () => {
     { description: "", qty: 1, unitPrice: 0 },
   ]);
   const [showPreview, setShowPreview] = useState(false);
+  const [customers, setCustomers] = useState([]);
+  const [selectedCustomerId, setSelectedCustomerId] = useState("");
   const printRef = useRef();
+
+  // Fetch customers from Supabase
+  useEffect(() => {
+    async function loadCustomers() {
+      const { data } = await supabase
+        .from("customers")
+        .select("id, name, property_address, property_city, property_state, property_zip, phone, email")
+        .is("deleted_at", null)
+        .order("name", { ascending: true });
+      if (data) setCustomers(data);
+    }
+    loadCustomers();
+  }, []);
+
+  const handleCustomerSelect = (customerId) => {
+    setSelectedCustomerId(customerId);
+    if (customerId === "" || customerId === "new") {
+      if (customerId === "new") {
+        setCustomerName("");
+        setCustomerAddress("");
+      }
+      return;
+    }
+    const c = customers.find((cust) => cust.id === customerId);
+    if (c) {
+      setCustomerName(c.name);
+      const parts = [c.property_address];
+      if (c.property_city) parts.push(c.property_city);
+      if (c.property_state) parts.push(c.property_state);
+      if (c.property_zip) parts.push(c.property_zip);
+      setCustomerAddress(parts.join(", "));
+    }
+  };
 
   const addItem = () => {
     setItems([...items, { description: "", qty: 1, unitPrice: 0 }]);
@@ -437,7 +473,42 @@ const QuoteGenerator = () => {
     setShowPreview(true);
   };
 
+  const [savedId, setSavedId] = useState(null);
+
+  const saveQuoteToDb = async () => {
+    const filteredItems = items.filter((i) => i.description);
+    const tot = filteredItems.reduce((sum, item) => sum + (item.qty || 0) * (item.unitPrice || 0), 0);
+
+    const payload = {
+      customer_id: selectedCustomerId && selectedCustomerId !== "new" ? selectedCustomerId : null,
+      customer_name: customerName || "Customer",
+      customer_address: customerAddress || null,
+      quote_number: quoteNumber,
+      quote_date: quoteDate,
+      items: filteredItems,
+      notes: notes || null,
+      total: tot,
+      status: "draft",
+    };
+
+    if (savedId) {
+      // Update existing
+      await supabase.from("quotes").update(payload).eq("id", savedId);
+    } else {
+      // Insert new
+      const { data } = await supabase.from("quotes").insert(payload).select("id").single();
+      if (data) setSavedId(data.id);
+    }
+  };
+
+  const handleSaveAndPrint = async () => {
+    await saveQuoteToDb();
+    handlePrint();
+  };
+
   const handleNew = () => {
+    setSavedId(null);
+    setSelectedCustomerId("");
     setCustomerName("");
     setCustomerAddress("");
     setQuoteDate(todayISO());
@@ -589,6 +660,22 @@ const QuoteGenerator = () => {
               CUSTOMER
             </div>
             <div style={{ marginBottom: 12 }}>
+              <label style={labelStyle}>Select Customer</label>
+              <select
+                value={selectedCustomerId}
+                onChange={(e) => handleCustomerSelect(e.target.value)}
+                style={inputStyle}
+              >
+                <option value="">-- Select --</option>
+                <option value="new">+ New Customer</option>
+                {customers.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} — {c.property_address}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div style={{ marginBottom: 12 }}>
               <label style={labelStyle}>Name</label>
               <input
                 type="text"
@@ -596,6 +683,7 @@ const QuoteGenerator = () => {
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
                 style={inputStyle}
+                readOnly={selectedCustomerId !== "" && selectedCustomerId !== "new"}
               />
             </div>
             <div>
@@ -606,6 +694,7 @@ const QuoteGenerator = () => {
                 value={customerAddress}
                 onChange={(e) => setCustomerAddress(e.target.value)}
                 style={inputStyle}
+                readOnly={selectedCustomerId !== "" && selectedCustomerId !== "new"}
               />
             </div>
           </div>
@@ -762,8 +851,8 @@ const QuoteGenerator = () => {
             >
               {showPreview ? "HIDE PREVIEW" : "PREVIEW"}
             </button>
-            <button onClick={handlePrint} style={btnPrimary}>
-              SAVE AS PDF
+            <button onClick={handleSaveAndPrint} style={btnPrimary}>
+              SAVE & PDF
             </button>
           </div>
 

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
+import { supabase } from '@/lib/supabase'
 import { useCustomer, useDeleteCustomer } from '@/hooks/useCustomers'
 import { useCustomerPhotos, useUploadCustomerPhoto, useUpdatePhotoNotes, useDeleteCustomerPhoto, getPhotoUrl, PHOTO_TYPES } from '@/hooks/usePhotos'
 import type { PhotoType } from '@/hooks/usePhotos'
@@ -342,7 +343,26 @@ function CommsLog({ customerId }: { customerId: string }) {
 }
 
 function CustomerDocs({ customerId }: { customerId: string }) {
-  const { data: invoices, isLoading } = useInvoices({ customerId })
+  const { data: invoices, isLoading: loadingInvoices } = useInvoices({ customerId })
+  const [quotes, setQuotes] = useState<any[]>([])
+  const [loadingQuotes, setLoadingQuotes] = useState(true)
+
+  useEffect(() => {
+    async function loadQuotes() {
+      const { data } = await supabase
+        .from('quotes')
+        .select('*')
+        .eq('customer_id', customerId)
+        .order('created_at', { ascending: false })
+      if (data) setQuotes(data)
+      setLoadingQuotes(false)
+    }
+    loadQuotes()
+  }, [customerId])
+
+  const isLoading = loadingInvoices || loadingQuotes
+  const hasInvoices = invoices && invoices.length > 0
+  const hasQuotes = quotes.length > 0
 
   if (isLoading) {
     return (
@@ -352,18 +372,41 @@ function CustomerDocs({ customerId }: { customerId: string }) {
     )
   }
 
-  if (!invoices || invoices.length === 0) {
+  if (!hasInvoices && !hasQuotes) {
     return (
       <div className="text-center py-12 text-gray-500">
         <p className="text-lg mb-1">No documents yet</p>
-        <p className="text-sm">Invoices for this customer will appear here.</p>
+        <p className="text-sm">Quotes and invoices for this customer will appear here.</p>
       </div>
     )
   }
 
   return (
     <div className="space-y-2">
-      {invoices.map((inv) => {
+      {/* Quotes */}
+      {quotes.map((q) => (
+        <div
+          key={q.id}
+          className="flex items-center justify-between bg-white rounded-lg border border-gray-100 p-3"
+        >
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 mb-0.5">
+              <span className="text-xs px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 font-medium">Quote</span>
+              <span className="text-sm font-semibold text-gray-800">{q.quote_number}</span>
+              <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-gray-100 text-gray-600">
+                {q.status}
+              </span>
+            </div>
+            <p className="text-xs text-gray-500">
+              {new Date(q.quote_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+            </p>
+          </div>
+          <span className="text-sm font-bold text-gray-800 ml-4">${Number(q.total).toFixed(2)}</span>
+        </div>
+      ))}
+
+      {/* Invoices */}
+      {invoices?.map((inv) => {
         const statusInfo = PAYMENT_STATUS_OPTIONS.find(s => s.value === inv.payment_status)
         return (
           <Link
