@@ -81,6 +81,91 @@ export function useUploadPhoto() {
   })
 }
 
+/** Upload a photo directly to a customer (not tied to a job) */
+export function useUploadCustomerPhoto() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({
+      customerId,
+      file,
+      photoType,
+    }: {
+      customerId: string
+      file: File
+      photoType: PhotoType
+    }) => {
+      const compressed = await compressImage(file)
+      const ext = compressed.name.split('.').pop() || 'jpg'
+      const path = `customers/${customerId}/${Date.now()}-${photoType}.${ext}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('job-photos')
+        .upload(path, compressed, {
+          cacheControl: '3600',
+          upsert: false,
+        })
+      if (uploadError) throw uploadError
+
+      const { data, error: insertError } = await supabase
+        .from('photos')
+        .insert({
+          customer_id: customerId,
+          photo_type: photoType,
+          storage_path: path,
+          file_size: compressed.size,
+          mime_type: compressed.type,
+        })
+        .select()
+        .single()
+      if (insertError) throw insertError
+      return data as Photo
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['customer-photos', variables.customerId] })
+    },
+  })
+}
+
+/** Update the notes on a photo */
+export function useUpdatePhotoNotes() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ id, notes }: { id: string; notes: string | null }) => {
+      const { error } = await supabase
+        .from('photos')
+        .update({ notes })
+        .eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['customer-photos'] })
+      queryClient.invalidateQueries({ queryKey: ['photos'] })
+    },
+  })
+}
+
+/** Delete a customer photo (soft delete) */
+export function useDeleteCustomerPhoto() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ id, customerId, storagePath }: { id: string; customerId: string; storagePath: string }) => {
+      await supabase.storage.from('job-photos').remove([storagePath])
+      const { error } = await supabase
+        .from('photos')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', id)
+      if (error) throw error
+      return customerId
+    },
+    onSuccess: (customerId) => {
+      queryClient.invalidateQueries({ queryKey: ['customer-photos', customerId] })
+    },
+  })
+}
+
 export function useDeletePhoto() {
   const queryClient = useQueryClient()
 
@@ -102,35 +187,53 @@ export function useDeletePhoto() {
   })
 }
 
-/** Get all photos for a customer across all their jobs */
+/** Get all photos for a customer (both job-linked and direct uploads) */
 export function useCustomerPhotos(customerId: string | undefined) {
   return useQuery({
     queryKey: ['customer-photos', customerId],
     queryFn: async () => {
       if (!customerId) return []
 
-      // Get all jobs for this customer
+      // Get photos directly linked to customer
+      const { data: directPhotos, error: e1 } = await supabase
+        .from('photos')
+        .select('*, jobs(service_type, scheduled_date)')
+        .eq('customer_id', customerId)
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false })
+      if (e1) throw e1
+
+      // Get photos linked via jobs (for backwards compat)
       const { data: jobs, error: jobsError } = await supabase
         .from('jobs')
         .select('id')
         .eq('customer_id', customerId)
         .is('deleted_at', null)
-
       if (jobsError) throw jobsError
-      if (!jobs || jobs.length === 0) return []
+
+      if (!jobs || jobs.length === 0) return (directPhotos ?? []) as (Photo & { jobs: { service_type: string; scheduled_date: string } | null })[]
 
       const jobIds = jobs.map(j => j.id)
 
-      // Get all photos for those jobs
-      const { data: photos, error: photosError } = await supabase
+      const { data: jobPhotos, error: e2 } = await supabase
         .from('photos')
         .select('*, jobs(service_type, scheduled_date)')
         .in('job_id', jobIds)
         .is('deleted_at', null)
+        .is('customer_id', null) // Only get ones NOT already linked to customer
         .order('created_at', { ascending: false })
+      if (e2) throw e2
 
-      if (photosError) throw photosError
-      return photos as (Photo & { jobs: { service_type: string; scheduled_date: string } | null })[]
+      const all = [...(directPhotos ?? []), ...(jobPhotos ?? [])]
+      // Deduplicate by id
+      const seen = new Set<string>()
+      const unique = all.filter(p => {
+        if (seen.has(p.id)) return false
+        seen.add(p.id)
+        return true
+      })
+
+      return unique as (Photo & { jobs: { service_type: string; scheduled_date: string } | null })[]
     },
     enabled: !!customerId,
   })

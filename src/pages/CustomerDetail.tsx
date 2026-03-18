@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
 import { useCustomer, useDeleteCustomer } from '@/hooks/useCustomers'
-import { useCustomerPhotos, getPhotoUrl, PHOTO_TYPES } from '@/hooks/usePhotos'
+import { useCustomerPhotos, useUploadCustomerPhoto, useUpdatePhotoNotes, useDeleteCustomerPhoto, getPhotoUrl, PHOTO_TYPES } from '@/hooks/usePhotos'
+import type { PhotoType } from '@/hooks/usePhotos'
 import { SERVICE_TYPES, useJobs, getServiceLabels } from '@/hooks/useJobs'
 import { useCustomerServices } from '@/hooks/useCustomerServices'
 import { useCustomerComms, useAddComm, useDeleteComm } from '@/hooks/useCustomerComms'
@@ -392,8 +393,13 @@ function CustomerDocs({ customerId }: { customerId: string }) {
 
 function PhotoGallery({ customerId }: { customerId: string }) {
   const { data: photos, isLoading } = useCustomerPhotos(customerId)
+  const uploadPhoto = useUploadCustomerPhoto()
+  const updateNotes = useUpdatePhotoNotes()
+  const deletePhoto = useDeleteCustomerPhoto()
   const [urls, setUrls] = useState<Record<string, string>>({})
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null)
+  const [editingNotes, setEditingNotes] = useState<string | null>(null)
+  const [noteText, setNoteText] = useState('')
 
   useEffect(() => {
     if (!photos || photos.length === 0) return
@@ -417,6 +423,37 @@ function PhotoGallery({ customerId }: { customerId: string }) {
     return () => { cancelled = true }
   }, [photos])
 
+  const handleUpload = (photoType: PhotoType) => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = 'image/*'
+    input.capture = 'environment' // Opens camera on mobile
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0]
+      if (file) {
+        uploadPhoto.mutate({ customerId, file, photoType })
+      }
+    }
+    input.click()
+  }
+
+  const handleSaveNotes = (photoId: string) => {
+    updateNotes.mutate({ id: photoId, notes: noteText.trim() || null })
+    setEditingNotes(null)
+    setNoteText('')
+  }
+
+  const handleDeleteNote = (photoId: string) => {
+    updateNotes.mutate({ id: photoId, notes: null })
+  }
+
+  const handleDeletePhoto = (photo: { id: string; storage_path: string }) => {
+    if (confirm('Delete this photo?')) {
+      deletePhoto.mutate({ id: photo.id, customerId, storagePath: photo.storage_path })
+      if (selectedPhoto === photo.id) setSelectedPhoto(null)
+    }
+  }
+
   const serviceLabel = (val: string) =>
     SERVICE_TYPES.find((s) => s.value === val)?.label ?? val
 
@@ -431,53 +468,153 @@ function PhotoGallery({ customerId }: { customerId: string }) {
     )
   }
 
-  if (!photos || photos.length === 0) {
-    return (
-      <div className="text-center py-12 text-gray-500">
-        <p className="text-lg mb-1">No photos yet</p>
-        <p className="text-sm">Photos taken during jobs will appear here.</p>
-      </div>
-    )
-  }
-
   return (
-    <>
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        {photos.map((photo) => (
-          <div
-            key={photo.id}
-            className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
-            onClick={() => setSelectedPhoto(photo.id)}
-          >
-            <div className="aspect-square bg-gray-100 flex items-center justify-center">
-              {urls[photo.id] ? (
-                <img
-                  src={urls[photo.id]}
-                  alt={`${typeLabel(photo.photo_type)} — ${serviceLabel(photo.jobs?.service_type ?? '')}`}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="animate-pulse w-full h-full bg-gray-200" />
-              )}
-            </div>
-            <div className="p-2">
-              <div className="flex items-center gap-1.5 mb-1">
-                <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-green-100 text-green-700">
-                  {typeLabel(photo.photo_type)}
-                </span>
-                <span className="text-xs text-gray-500">
-                  {serviceLabel(photo.jobs?.service_type ?? '')}
-                </span>
-              </div>
-              <p className="text-xs text-gray-400">
-                {photo.created_at
-                  ? `${new Date(photo.created_at).toLocaleDateString()} ${new Date(photo.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-                  : '—'}
-              </p>
-            </div>
-          </div>
-        ))}
+    <div>
+      {/* Upload Buttons */}
+      <div className="flex gap-3 mb-4">
+        <button
+          onClick={() => handleUpload('before')}
+          disabled={uploadPhoto.isPending}
+          className="flex-1 bg-brand-green text-white py-2.5 rounded-md font-medium text-sm hover:bg-brand-accent transition-colors disabled:opacity-50"
+        >
+          {uploadPhoto.isPending ? 'Uploading...' : 'Upload Before Photo'}
+        </button>
+        <button
+          onClick={() => handleUpload('after')}
+          disabled={uploadPhoto.isPending}
+          className="flex-1 bg-brand-green text-white py-2.5 rounded-md font-medium text-sm hover:bg-brand-accent transition-colors disabled:opacity-50"
+        >
+          {uploadPhoto.isPending ? 'Uploading...' : 'Upload After Photo'}
+        </button>
       </div>
+
+      {(!photos || photos.length === 0) && (
+        <div className="text-center py-12 text-gray-500">
+          <p className="text-lg mb-1">No photos yet</p>
+          <p className="text-sm">Upload before & after photos or take them during jobs.</p>
+        </div>
+      )}
+
+      {photos && photos.length > 0 && (
+        <div className="space-y-4">
+          {photos.map((photo) => (
+            <div
+              key={photo.id}
+              className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden"
+            >
+              {/* Photo */}
+              <div
+                className="aspect-video bg-gray-100 flex items-center justify-center cursor-pointer"
+                onClick={() => setSelectedPhoto(photo.id)}
+              >
+                {urls[photo.id] ? (
+                  <img
+                    src={urls[photo.id]}
+                    alt={`${typeLabel(photo.photo_type)} photo`}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="animate-pulse w-full h-full bg-gray-200" />
+                )}
+              </div>
+
+              {/* Info */}
+              <div className="p-3">
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${
+                      photo.photo_type === 'before'
+                        ? 'bg-yellow-100 text-yellow-700'
+                        : photo.photo_type === 'after'
+                        ? 'bg-green-100 text-green-700'
+                        : 'bg-blue-100 text-blue-700'
+                    }`}>
+                      {typeLabel(photo.photo_type)}
+                    </span>
+                    {photo.jobs?.service_type && (
+                      <span className="text-xs text-gray-500">
+                        {serviceLabel(photo.jobs.service_type)}
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => handleDeletePhoto(photo)}
+                    className="text-gray-300 hover:text-red-500 text-lg leading-none"
+                  >
+                    &times;
+                  </button>
+                </div>
+
+                {/* Date/Time */}
+                <p className="text-xs text-gray-400 mb-2">
+                  {photo.created_at
+                    ? new Date(photo.created_at).toLocaleDateString('en-US', {
+                        weekday: 'short',
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit',
+                      })
+                    : '—'}
+                </p>
+
+                {/* Notes */}
+                {editingNotes === photo.id ? (
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={noteText}
+                      onChange={(e) => setNoteText(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleSaveNotes(photo.id)}
+                      placeholder="Add a note..."
+                      className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-brand-green"
+                      autoFocus
+                    />
+                    <button
+                      onClick={() => handleSaveNotes(photo.id)}
+                      className="text-sm bg-brand-green text-white px-3 py-1 rounded font-medium hover:bg-brand-accent transition-colors"
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={() => { setEditingNotes(null); setNoteText('') }}
+                      className="text-sm text-gray-400 hover:text-gray-600"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : photo.notes ? (
+                  <div className="flex items-start justify-between gap-2 bg-gray-50 rounded p-2">
+                    <p className="text-sm text-gray-700 flex-1">{photo.notes}</p>
+                    <div className="flex gap-1 flex-shrink-0">
+                      <button
+                        onClick={() => { setEditingNotes(photo.id); setNoteText(photo.notes ?? '') }}
+                        className="text-xs text-brand-green hover:text-brand-accent font-medium"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeleteNote(photo.id)}
+                        className="text-xs text-red-400 hover:text-red-600 font-medium"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => { setEditingNotes(photo.id); setNoteText('') }}
+                    className="text-xs text-brand-green hover:text-brand-accent font-medium"
+                  >
+                    + Add Note
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Lightbox */}
       {selectedPhoto && urls[selectedPhoto] && (
@@ -495,10 +632,10 @@ function PhotoGallery({ customerId }: { customerId: string }) {
             onClick={() => setSelectedPhoto(null)}
             className="absolute top-4 right-4 text-white text-2xl font-bold bg-black/50 rounded-full w-10 h-10 flex items-center justify-center"
           >
-            ×
+            &times;
           </button>
         </div>
       )}
-    </>
+    </div>
   )
 }

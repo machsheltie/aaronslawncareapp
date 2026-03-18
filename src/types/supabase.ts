@@ -567,12 +567,14 @@ export type Database = {
       photos: {
         Row: {
           created_at: string | null
+          customer_id: string | null
           deleted_at: string | null
           file_size: number | null
           height: number | null
           id: string
-          job_id: string
+          job_id: string | null
           mime_type: string | null
+          notes: string | null
           photo_type: string
           sent_at: string | null
           sent_to_customer: boolean | null
@@ -582,12 +584,14 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          customer_id?: string | null
           deleted_at?: string | null
           file_size?: number | null
           height?: number | null
           id?: string
-          job_id: string
+          job_id?: string | null
           mime_type?: string | null
+          notes?: string | null
           photo_type: string
           sent_at?: string | null
           sent_to_customer?: boolean | null
@@ -597,12 +601,14 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          customer_id?: string | null
           deleted_at?: string | null
           file_size?: number | null
           height?: number | null
           id?: string
-          job_id?: string
+          job_id?: string | null
           mime_type?: string | null
+          notes?: string | null
           photo_type?: string
           sent_at?: string | null
           sent_to_customer?: boolean | null
@@ -611,6 +617,13 @@ export type Database = {
           width?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "photos_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "photos_job_id_fkey"
             columns: ["job_id"]
