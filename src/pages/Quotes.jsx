@@ -317,17 +317,23 @@ const QuoteGenerator = () => {
   const [showPreview, setShowPreview] = useState(false);
   const [customers, setCustomers] = useState([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
+  const [savedId, setSavedId] = useState(null);
   const printRef = useRef();
 
   // Fetch customers from Supabase
   useEffect(() => {
     async function loadCustomers() {
-      const { data } = await supabase
-        .from("customers")
-        .select("id, name, property_address, property_city, property_state, property_zip, phone, email")
-        .is("deleted_at", null)
-        .order("name", { ascending: true });
-      if (data) setCustomers(data);
+      try {
+        const { data, error } = await supabase
+          .from("customers")
+          .select("id, name, property_address, property_city, property_state, property_zip, phone, email")
+          .is("deleted_at", null)
+          .order("name", { ascending: true });
+        if (error) { console.error("Failed to load customers:", error); return; }
+        if (data) setCustomers(data);
+      } catch (err) {
+        console.error("Customer fetch error:", err);
+      }
     }
     loadCustomers();
   }, []);
@@ -472,8 +478,6 @@ const QuoteGenerator = () => {
     }
     setShowPreview(true);
   };
-
-  const [savedId, setSavedId] = useState(null);
 
   const saveQuoteToDb = async () => {
     const filteredItems = items.filter((i) => i.description);
