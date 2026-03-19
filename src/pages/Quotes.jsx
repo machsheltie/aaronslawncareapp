@@ -998,23 +998,24 @@ const QuoteGenerator = () => {
               </div>
 
               {/* Add discount button — always visible */}
-              <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
+              <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 12 }}>
                 <button
                   type="button"
                   onClick={addDiscount}
                   aria-label="Add a discount"
                   style={{
-                    padding: "3px 10px",
-                    background: "transparent",
-                    color: BRAND.medGray,
-                    border: `1px dashed ${BRAND.medGray}`,
-                    borderRadius: 4,
-                    fontSize: 10,
-                    fontWeight: 600,
+                    padding: "8px 20px",
+                    background: BRAND.discountBg,
+                    color: BRAND.discountRed,
+                    border: `1px solid ${BRAND.discountBorder}`,
+                    borderRadius: 6,
+                    fontSize: 13,
+                    fontWeight: 700,
                     cursor: "pointer",
+                    letterSpacing: 0.5,
                   }}
                 >
-                  + Discount
+                  + ADD DISCOUNT
                 </button>
               </div>
             </div>
