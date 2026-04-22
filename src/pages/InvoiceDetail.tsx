@@ -48,7 +48,15 @@ export default function InvoiceDetail() {
       }
       const firstName = (invoice.customers?.name ?? '').split(' ')[0] || 'there'
       const body = `Hi ${firstName}, your invoice from Aaron's Lawn Care is ready: ${hostedUrl}`
-      window.location.href = `sms:${normalizeToE164(phone)}?body=${encodeURIComponent(body)}`
+      const smsUri = `sms:${normalizeToE164(phone)}?body=${encodeURIComponent(body)}`
+      // Synthetic anchor click — more reliable than window.location.href
+      // on iOS PWAs for launching the native SMS app after an async chain.
+      const a = document.createElement('a')
+      a.href = smsUri
+      a.rel = 'noopener'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
     } catch (err) {
       setTextError(err instanceof Error ? err.message : 'Failed to create invoice')
     }

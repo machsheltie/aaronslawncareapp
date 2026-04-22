@@ -63,6 +63,18 @@ export default function PaymentMethodModal({
     }, 500)
   }
 
+  const launchSmsUri = (uri: string) => {
+    // iOS Safari (and PWAs especially) blocks sms: navigation via
+    // window.location when the user-gesture chain has been broken by
+    // setTimeout. A synthetic anchor click is the most reliable trigger.
+    const a = document.createElement('a')
+    a.href = uri
+    a.rel = 'noopener'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+  }
+
   const handleTextInvoice = async () => {
     if (!hasPhone) return
     setState({ kind: 'loading', method: 'text' })
@@ -94,11 +106,13 @@ export default function PaymentMethodModal({
       const body = `Hi ${firstName}, your invoice from Aaron's Lawn Care is ready: ${result.hosted_invoice_url}`
       const smsUri = `sms:${normalizeToE164(phone)}?body=${encodeURIComponent(body)}`
 
-      flashSuccessThenClose(() => {
-        window.location.href = smsUri
-        onComplete()
-        onClose()
-      })
+      // Fire the sms: URI synchronously after the mutation resolves — no
+      // setTimeout before this, or iOS loses the user-gesture context and
+      // silently blocks the navigation. UI cleanup runs after.
+      launchSmsUri(smsUri)
+      onComplete()
+      onClose()
+      setState({ kind: 'idle' })
     } catch (err) {
       setState({
         kind: 'error',
