@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
-import { useInvoice, useUpdateInvoiceStatus, useDeleteInvoice, useCreateStripeInvoice, PAYMENT_STATUS_OPTIONS } from '@/hooks/useInvoices'
+import { useInvoice, useDeleteInvoice, useCreateStripeInvoice, PAYMENT_STATUS_OPTIONS } from '@/hooks/useInvoices'
 import PaymentForm from '@/components/payments/PaymentForm'
+import MarkPaidModal from '@/components/payments/MarkPaidModal'
 import { useQueryClient } from '@tanstack/react-query'
 import { downloadInvoicePdf } from '@/lib/generateInvoicePdf'
 import { normalizeToE164 } from '@/lib/phone'
@@ -11,19 +12,11 @@ export default function InvoiceDetail() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { data: invoice, isLoading, error } = useInvoice(id)
-  const updateStatus = useUpdateInvoiceStatus()
   const deleteInvoice = useDeleteInvoice()
   const createStripeInvoice = useCreateStripeInvoice()
   const [showPayment, setShowPayment] = useState(false)
+  const [showMarkPaid, setShowMarkPaid] = useState(false)
   const [textError, setTextError] = useState<string | null>(null)
-
-  const handleMarkPaid = () => {
-    if (!invoice) return
-    const method = prompt('Payment method: cash, check, ach, or credit_card')
-    if (method && ['cash', 'check', 'ach', 'credit_card'].includes(method)) {
-      updateStatus.mutate({ id: invoice.id, status: 'paid', paymentMethod: method })
-    }
-  }
 
   const handleDelete = () => {
     if (invoice && confirm('Delete this invoice?')) {
@@ -105,7 +98,7 @@ export default function InvoiceDetail() {
         <div className="flex gap-2">
           {invoice.payment_status === 'unpaid' && (
             <button
-              onClick={handleMarkPaid}
+              onClick={() => setShowMarkPaid(true)}
               className="bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-green-700 transition-colors"
             >
               Mark Paid
@@ -205,6 +198,13 @@ export default function InvoiceDetail() {
           </button>
         </div>
       )}
+
+      <MarkPaidModal
+        isOpen={showMarkPaid}
+        onClose={() => setShowMarkPaid(false)}
+        invoiceId={invoice.id}
+        invoiceNumber={invoice.invoice_number}
+      />
 
       {/* Payment Modal */}
       {showPayment && invoice.payment_status === 'unpaid' && (

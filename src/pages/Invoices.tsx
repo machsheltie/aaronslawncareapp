@@ -1,21 +1,15 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useInvoices, useUpdateInvoiceStatus, useDeleteInvoice, PAYMENT_STATUS_OPTIONS } from '@/hooks/useInvoices'
+import { useInvoices, useDeleteInvoice, PAYMENT_STATUS_OPTIONS } from '@/hooks/useInvoices'
+import MarkPaidModal from '@/components/payments/MarkPaidModal'
 
 export default function Invoices() {
   const [statusFilter, setStatusFilter] = useState('')
   const { data: invoices, isLoading, error } = useInvoices({
     status: statusFilter || undefined,
   })
-  const updateStatus = useUpdateInvoiceStatus()
   const deleteInvoice = useDeleteInvoice()
-
-  const handleMarkPaid = (id: string) => {
-    const method = prompt('Payment method: cash, check, ach, or credit_card')
-    if (method && ['cash', 'check', 'ach', 'credit_card'].includes(method)) {
-      updateStatus.mutate({ id, status: 'paid', paymentMethod: method })
-    }
-  }
+  const [markPaidTarget, setMarkPaidTarget] = useState<{ id: string; number: string } | null>(null)
 
   const handleDelete = (id: string) => {
     if (confirm('Delete this invoice?')) deleteInvoice.mutate(id)
@@ -87,6 +81,13 @@ export default function Invoices() {
         </div>
       )}
 
+      <MarkPaidModal
+        isOpen={markPaidTarget !== null}
+        onClose={() => setMarkPaidTarget(null)}
+        invoiceId={markPaidTarget?.id ?? ''}
+        invoiceNumber={markPaidTarget?.number}
+      />
+
       {invoices && invoices.length > 0 && (
         <div className="space-y-3">
           {invoices.map((invoice) => {
@@ -119,7 +120,7 @@ export default function Invoices() {
                     <span className="text-lg font-bold text-gray-800">${Number(invoice.total).toFixed(2)}</span>
                     {invoice.payment_status === 'unpaid' && (
                       <button
-                        onClick={() => handleMarkPaid(invoice.id)}
+                        onClick={() => setMarkPaidTarget({ id: invoice.id, number: invoice.invoice_number })}
                         className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded hover:bg-green-200 transition-colors"
                       >
                         Mark Paid
