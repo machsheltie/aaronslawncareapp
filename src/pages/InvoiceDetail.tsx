@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
-import { useInvoice, useUpdateInvoiceStatus, useDeleteInvoice, PAYMENT_STATUS_OPTIONS } from '@/hooks/useInvoices'
+import { useInvoice, useUpdateInvoiceStatus, useDeleteInvoice, useCreateStripeInvoice, PAYMENT_STATUS_OPTIONS } from '@/hooks/useInvoices'
 import PaymentForm from '@/components/payments/PaymentForm'
 import { useQueryClient } from '@tanstack/react-query'
 import { downloadInvoicePdf } from '@/lib/generateInvoicePdf'
+import { normalizeToE164 } from '@/lib/phone'
 
 export default function InvoiceDetail() {
   const { id } = useParams()
@@ -12,7 +13,9 @@ export default function InvoiceDetail() {
   const { data: invoice, isLoading, error } = useInvoice(id)
   const updateStatus = useUpdateInvoiceStatus()
   const deleteInvoice = useDeleteInvoice()
+  const createStripeInvoice = useCreateStripeInvoice()
   const [showPayment, setShowPayment] = useState(false)
+  const [textError, setTextError] = useState<string | null>(null)
 
   const handleMarkPaid = () => {
     if (!invoice) return
@@ -25,6 +28,29 @@ export default function InvoiceDetail() {
   const handleDelete = () => {
     if (invoice && confirm('Delete this invoice?')) {
       deleteInvoice.mutate(invoice.id, { onSuccess: () => navigate('/documents/invoices') })
+    }
+  }
+
+  const handleTextInvoice = async () => {
+    if (!invoice) return
+    const phone = invoice.customers?.phone
+    if (!phone) {
+      setTextError('Customer has no phone number on file')
+      return
+    }
+    setTextError(null)
+    try {
+      let hostedUrl = invoice.stripe_invoice_url
+      if (!hostedUrl) {
+        const result = await createStripeInvoice.mutateAsync({ existingInvoiceId: invoice.id })
+        hostedUrl = result.hosted_invoice_url
+        queryClient.invalidateQueries({ queryKey: ['invoices'] })
+      }
+      const firstName = (invoice.customers?.name ?? '').split(' ')[0] || 'there'
+      const body = `Hi ${firstName}, your invoice from Aaron's Lawn Care is ready: ${hostedUrl}`
+      window.location.href = `sms:${normalizeToE164(phone)}?body=${encodeURIComponent(body)}`
+    } catch (err) {
+      setTextError(err instanceof Error ? err.message : 'Failed to create invoice')
     }
   }
 
@@ -141,12 +167,31 @@ export default function InvoiceDetail() {
         )}
       </div>
 
-      {/* Collect Payment via Stripe */}
+      {/* Adaptive Text Invoice + Collect Payment */}
       {invoice.payment_status === 'unpaid' && (
-        <div className="mt-4">
+        <div className="mt-4 space-y-2">
+          <button
+            onClick={handleTextInvoice}
+            disabled={createStripeInvoice.isPending}
+            className="w-full bg-brand-green text-white py-3 rounded-lg font-medium hover:bg-brand-accent transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {createStripeInvoice.isPending ? (
+              <>
+                <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                Preparing invoice…
+              </>
+            ) : (
+              <>📱 Text Invoice</>
+            )}
+          </button>
+          {textError && (
+            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+              {textError}
+            </p>
+          )}
           <button
             onClick={() => setShowPayment(true)}
-            className="w-full bg-brand-green text-white py-3 rounded-lg font-medium hover:bg-brand-accent transition-colors"
+            className="w-full border border-gray-300 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-50 transition-colors"
           >
             Collect Payment (Card / ACH)
           </button>

@@ -99,6 +99,59 @@ serve(async (req) => {
       break
     }
 
+    case 'invoice.paid': {
+      const inv = event.data.object as Stripe.Invoice
+      const appInvoiceId = inv.metadata?.app_invoice_id
+      if (!appInvoiceId) break
+
+      // Decision 24: defense-in-depth cross-check against metadata spoofing.
+      const { data: row } = await supabase
+        .from('invoices')
+        .select('stripe_invoice_id')
+        .eq('id', appInvoiceId)
+        .single()
+      if (!row || row.stripe_invoice_id !== inv.id) {
+        console.warn('invoice.paid metadata mismatch', {
+          appInvoiceId,
+          eventInvoiceId: inv.id,
+          rowStripeId: row?.stripe_invoice_id,
+        })
+        break
+      }
+
+      // Decision 21: derive payment_method from PaymentIntent.
+      let paymentMethod: 'credit_card' | 'ach' = 'credit_card'
+      let paymentIntentId: string | null = null
+      const piRef = inv.payment_intent
+      if (piRef && typeof piRef === 'string') {
+        paymentIntentId = piRef
+        try {
+          const pi = await stripe.paymentIntents.retrieve(piRef)
+          const type = pi.payment_method_types?.[0]
+          if (type === 'us_bank_account') paymentMethod = 'ach'
+        } catch (err) {
+          console.warn('Failed to retrieve PaymentIntent for payment_method derivation', err)
+        }
+      }
+
+      const paidAt = inv.status_transitions?.paid_at
+        ? new Date(inv.status_transitions.paid_at * 1000).toISOString()
+        : new Date().toISOString()
+
+      await supabase
+        .from('invoices')
+        .update({
+          payment_status: 'paid',
+          stripe_payment_status: 'succeeded',
+          paid_at: paidAt,
+          amount_paid: (inv.amount_paid ?? 0) / 100,
+          payment_method: paymentMethod,
+          stripe_payment_intent_id: paymentIntentId,
+        })
+        .eq('id', appInvoiceId)
+      break
+    }
+
     default:
       console.log(`Unhandled event type: ${event.type}`)
   }

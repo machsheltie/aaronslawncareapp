@@ -144,6 +144,7 @@ export type Database = {
           property_zip: string | null
           service_day: string | null
           service_frequency: string | null
+          stripe_customer_id: string | null
           tags: string[] | null
           updated_at: string | null
         }
@@ -165,6 +166,7 @@ export type Database = {
           property_zip?: string | null
           service_day?: string | null
           service_frequency?: string | null
+          stripe_customer_id?: string | null
           tags?: string[] | null
           updated_at?: string | null
         }
@@ -186,6 +188,7 @@ export type Database = {
           property_zip?: string | null
           service_day?: string | null
           service_frequency?: string | null
+          stripe_customer_id?: string | null
           tags?: string[] | null
           updated_at?: string | null
         }
@@ -316,9 +319,8 @@ export type Database = {
           paid_at: string | null
           payment_method: string | null
           payment_status: string
-          sms_sent_at: string | null
-          stripe_checkout_session_id: string | null
-          stripe_checkout_url: string | null
+          stripe_invoice_id: string | null
+          stripe_invoice_url: string | null
           stripe_payment_intent_id: string | null
           stripe_payment_status: string | null
           subtotal: number
@@ -340,9 +342,8 @@ export type Database = {
           paid_at?: string | null
           payment_method?: string | null
           payment_status?: string
-          sms_sent_at?: string | null
-          stripe_checkout_session_id?: string | null
-          stripe_checkout_url?: string | null
+          stripe_invoice_id?: string | null
+          stripe_invoice_url?: string | null
           stripe_payment_intent_id?: string | null
           stripe_payment_status?: string | null
           subtotal: number
@@ -364,9 +365,8 @@ export type Database = {
           paid_at?: string | null
           payment_method?: string | null
           payment_status?: string
-          sms_sent_at?: string | null
-          stripe_checkout_session_id?: string | null
-          stripe_checkout_url?: string | null
+          stripe_invoice_id?: string | null
+          stripe_invoice_url?: string | null
           stripe_payment_intent_id?: string | null
           stripe_payment_status?: string | null
           subtotal?: number

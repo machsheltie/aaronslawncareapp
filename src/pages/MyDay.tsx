@@ -3,14 +3,12 @@ import { useJobs, useUpdateJob, useCreateJob, useRescheduleJob, useRainDay, SERV
 import { useCreateCustomer } from '@/hooks/useCustomers'
 import { useTodayReminders, useCompleteReminder } from '@/hooks/useReminders'
 import FollowUpForm from '@/components/FollowUpForm'
-import { useUploadPhoto } from '@/hooks/usePhotos'
-import { useCreateInvoice, useSendInvoiceSms } from '@/hooks/useInvoices'
+import PaymentMethodModal from '@/components/payments/PaymentMethodModal'
 import { useGenerateUpcomingJobs } from '@/hooks/useRecurringSchedules'
 import { useSkipWeek } from '@/hooks/useRecurringSchedules'
 import { geocodeAddress, optimizeRoute, openInMapsApp } from '@/lib/routeOptimizer'
 import type { Stop } from '@/lib/routeOptimizer'
 import type { JobWithCustomer } from '@/hooks/useJobs'
-import type { PhotoType } from '@/hooks/usePhotos'
 
 function getToday() {
   return new Date().toISOString().split('T')[0]
@@ -20,14 +18,11 @@ type WorkflowState =
   | { step: 'idle' }
   | { step: 'in_progress'; jobId: string }
   | { step: 'photo_prompt'; jobId: string }
-  | { step: 'completing'; jobId: string }
+  | { step: 'payment_method'; jobId: string; photoFile?: File }
 
 export default function MyDay() {
   const { data: todayJobs, isLoading, refetch } = useJobs({ date: getToday() })
   const updateJob = useUpdateJob()
-  const uploadPhoto = useUploadPhoto()
-  const createInvoice = useCreateInvoice()
-  const sendSms = useSendInvoiceSms()
   const generateJobs = useGenerateUpcomingJobs()
   const skipWeek = useSkipWeek()
   const rescheduleJob = useRescheduleJob()
@@ -159,47 +154,9 @@ export default function MyDay() {
     setWorkflow({ step: 'photo_prompt', jobId })
   }
 
-  const handlePhotoTaken = async () => {
+  const handlePhotoTaken = () => {
     if (!photoFile || workflow.step !== 'photo_prompt') return
-
-    setWorkflow({ step: 'completing', jobId: workflow.jobId })
-
-    try {
-      // Upload the after photo
-      const uploadedPhoto = await uploadPhoto.mutateAsync({
-        jobId: workflow.jobId,
-        file: photoFile,
-        photoType: 'after' as PhotoType,
-      })
-
-      // Mark job completed
-      await updateJob.mutateAsync({
-        id: workflow.jobId,
-        status: 'completed',
-        actual_end_time: new Date().toISOString(),
-      })
-
-      // Auto-create invoice and send SMS to customer with photo
-      const job = todayJobs?.find(j => j.id === workflow.jobId)
-      if (job) {
-        const invoice = await createInvoice.mutateAsync({
-          customer_id: job.customer_id,
-          job_id: job.id,
-          subtotal: Number(job.actual_price || job.estimated_price || 0),
-          due_days: 30,
-          notes: `${getServiceLabels(job.service_type)} — ${getToday()}`,
-        })
-        // Send invoice via MMS with photo attached (fire and forget)
-        sendSms.mutate({ invoiceId: invoice.id, photoPath: uploadedPhoto.storage_path })
-      }
-
-      setPhotoFile(null)
-      setWorkflow({ step: 'idle' })
-      refetch()
-    } catch (err) {
-      alert('Error completing job: ' + (err instanceof Error ? err.message : 'Unknown'))
-      setWorkflow({ step: 'photo_prompt', jobId: workflow.jobId })
-    }
+    setWorkflow({ step: 'payment_method', jobId: workflow.jobId, photoFile })
   }
 
   const handleSkip = (job: JobWithCustomer) => {
@@ -224,38 +181,15 @@ export default function MyDay() {
     )
   }
 
-  const handleSkipPhoto = async () => {
+  const handleSkipPhoto = () => {
     if (workflow.step !== 'photo_prompt') return
-
-    setWorkflow({ step: 'completing', jobId: workflow.jobId })
-
-    try {
-      await updateJob.mutateAsync({
-        id: workflow.jobId,
-        status: 'completed',
-        actual_end_time: new Date().toISOString(),
-      })
-
-      const job = todayJobs?.find(j => j.id === workflow.jobId)
-      if (job) {
-        const invoice = await createInvoice.mutateAsync({
-          customer_id: job.customer_id,
-          job_id: job.id,
-          subtotal: Number(job.actual_price || job.estimated_price || 0),
-          due_days: 30,
-          notes: `${getServiceLabels(job.service_type)} — ${getToday()}`,
-        })
-        // Send invoice via SMS — no photo attached
-        sendSms.mutate({ invoiceId: invoice.id })
-      }
-
-      setWorkflow({ step: 'idle' })
-      refetch()
-    } catch (err) {
-      alert('Error: ' + (err instanceof Error ? err.message : 'Unknown'))
-      setWorkflow({ step: 'photo_prompt', jobId: workflow.jobId })
-    }
+    setWorkflow({ step: 'payment_method', jobId: workflow.jobId, photoFile: undefined })
   }
+
+  const paymentMethodJob =
+    workflow.step === 'payment_method'
+      ? todayJobs?.find(j => j.id === workflow.jobId) ?? null
+      : null
 
   // --- Render ---
 
@@ -643,12 +577,27 @@ export default function MyDay() {
         </div>
       )}
 
-      {/* Completing spinner */}
-      {workflow.step === 'completing' && (
-        <div className="bg-green-50 border-2 border-green-300 rounded-lg p-6 mb-4 text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto mb-2" />
-          <p className="text-green-700 font-medium">Completing job & sending invoice...</p>
-        </div>
+      {/* Payment Method Modal — drives job completion */}
+      {paymentMethodJob && workflow.step === 'payment_method' && (
+        <PaymentMethodModal
+          isOpen={true}
+          job={paymentMethodJob}
+          photoFile={workflow.photoFile}
+          onClose={() => setWorkflow({ step: 'photo_prompt', jobId: workflow.jobId })}
+          onComplete={() => {
+            const jobId = workflow.jobId
+            updateJob.mutate(
+              { id: jobId, status: 'completed', actual_end_time: new Date().toISOString() },
+              {
+                onSuccess: () => {
+                  setPhotoFile(null)
+                  setWorkflow({ step: 'idle' })
+                  refetch()
+                },
+              }
+            )
+          }}
+        />
       )}
 
       {/* Job list */}

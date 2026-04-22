@@ -151,15 +151,41 @@ export function useUpdateInvoiceStatus() {
   })
 }
 
-export function useSendInvoiceSms() {
+export type CreateStripeInvoiceInput =
+  | {
+      invoiceId: string
+      jobData: {
+        customer_id: string
+        job_id?: string
+        service_type: string
+        amount: number
+        notes?: string
+        due_days?: number
+      }
+      photoPath?: string
+    }
+  | { existingInvoiceId: string }
+
+export type CreateStripeInvoiceResult = {
+  success: boolean
+  invoiceId: string
+  stripe_invoice_id: string
+  hosted_invoice_url: string
+}
+
+export function useCreateStripeInvoice() {
+  const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async ({ invoiceId, photoPath }: { invoiceId: string; photoPath?: string }) => {
+    mutationFn: async (input: CreateStripeInvoiceInput): Promise<CreateStripeInvoiceResult> => {
       const { data, error } = await supabase.functions.invoke('send-invoice-sms', {
-        body: { invoiceId, photoPath },
+        body: input,
       })
       if (error) throw error
       if (data?.error && !data?.alreadyPaid) throw new Error(data.error)
-      return data as { success: boolean; paymentUrl: string; smsSent: boolean; reason?: string }
+      return data as CreateStripeInvoiceResult
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['invoices'] })
     },
   })
 }

@@ -447,6 +447,18 @@ VALUES (
    - Password: (generate strong password)
    - Auto Confirm: Yes
 
+## Stripe Invoice Webhook
+
+The `stripe-webhook` edge function listens for Stripe events to keep app invoices in sync. When configuring the webhook endpoint in the Stripe Dashboard, the enabled events list MUST include:
+
+- `payment_intent.succeeded`
+- `payment_intent.processing`
+- `payment_intent.payment_failed`
+- `checkout.session.completed` (legacy; safe to keep)
+- **`invoice.paid`** — required for the Text Invoice flow so hosted-invoice payments flip the app invoice to `paid`.
+
+Also confirm that Stripe Dashboard → Billing → Invoice settings has "Email customer invoices" and "Email invoice reminders" **DISABLED** — delivery is SMS-only.
+
 ## Next Steps
 
 - [ ] Create .env file with Supabase credentials

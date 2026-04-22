@@ -1,10 +1,119 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import Stripe from 'https://esm.sh/stripe@13.0.0'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+// Mirror of src/hooks/useJobs.ts SERVICE_TYPES. Kept inline to avoid client-server import.
+const SERVICE_LABELS: Record<string, string> = {
+  mowing: 'Mowing',
+  edging: 'Edging',
+  leaf_removal: 'Leaf Removal',
+  aeration: 'Aeration',
+  landscaping: 'Landscaping',
+  garden_bed_design: 'Garden Bed Design',
+  hedge_trimming: 'Hedge Trimming',
+  tree_removal: 'Tree Removal',
+  tilling: 'Tilling',
+  snow_removal: 'Snow Removal',
+  spraying: 'Spraying',
+  weed_removal: 'Weed Removal',
+  mulching: 'Mulching',
+  seeding_grass: 'Seeding Grass',
+  french_drain: 'French Drain Installation',
+}
+
+function getServiceLabels(serviceType: string): string {
+  return serviceType
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean)
+    .map(t => SERVICE_LABELS[t] ?? t)
+    .join(', ')
+}
+
+async function getNextInvoiceNumber(supabase: SupabaseClient): Promise<string> {
+  const today = new Date().toISOString().split('T')[0].replace(/-/g, '')
+  const prefix = `INV-${today}`
+  const { data } = await supabase
+    .from('invoices')
+    .select('invoice_number')
+    .like('invoice_number', `${prefix}%`)
+    .order('invoice_number', { ascending: false })
+    .limit(1)
+  if (data && data.length > 0) {
+    const lastNum = parseInt(data[0].invoice_number.split('-')[2] || '0', 10)
+    return `${prefix}-${String(lastNum + 1).padStart(3, '0')}`
+  }
+  return `${prefix}-001`
+}
+
+// Ensure a Stripe Customer exists and return its ID. Handles the concurrent-create race
+// via UNIQUE constraint + re-read (Decision 14 / AC16).
+async function ensureStripeCustomer(
+  supabase: SupabaseClient,
+  stripe: Stripe,
+  customerId: string
+): Promise<string> {
+  const { data: customer, error } = await supabase
+    .from('customers')
+    .select('id, name, phone, stripe_customer_id')
+    .eq('id', customerId)
+    .single()
+  if (error || !customer) throw new Error(`Customer ${customerId} not found`)
+
+  if (customer.stripe_customer_id) return customer.stripe_customer_id
+
+  // Decision 20: do NOT pass email, to suppress Stripe email delivery.
+  const created = await stripe.customers.create({
+    name: customer.name,
+    phone: customer.phone,
+    metadata: { app_customer_id: customerId },
+  })
+
+  const { error: updateError } = await supabase
+    .from('customers')
+    .update({ stripe_customer_id: created.id })
+    .eq('id', customerId)
+
+  if (updateError) {
+    // UNIQUE-constraint violation from concurrent write — re-read and use the winner's ID.
+    const { data: reread } = await supabase
+      .from('customers')
+      .select('stripe_customer_id')
+      .eq('id', customerId)
+      .single()
+    if (reread?.stripe_customer_id) return reread.stripe_customer_id
+    throw updateError
+  }
+
+  return created.id
+}
+
+type BranchAInput = {
+  invoiceId: string
+  jobData: {
+    customer_id: string
+    job_id?: string
+    service_type: string
+    amount: number
+    notes?: string
+    due_days?: number
+  }
+  photoPath?: string
+}
+
+type BranchBInput = {
+  existingInvoiceId: string
+}
+
+type Input = BranchAInput | BranchBInput
+
+function isBranchA(input: Input): input is BranchAInput {
+  return 'invoiceId' in input && 'jobData' in input
 }
 
 serve(async (req) => {
@@ -23,171 +132,225 @@ serve(async (req) => {
       httpClient: Stripe.createFetchHttpClient(),
     })
 
-    const { invoiceId, photoPath } = await req.json()
+    const input = (await req.json()) as Input
 
-    if (!invoiceId) {
-      return new Response(
-        JSON.stringify({ error: 'invoiceId is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+    if (isBranchA(input)) {
+      return await handleBranchA(supabase, stripe, input)
     }
-
-    // Fetch invoice with customer details
-    const { data: invoice, error: fetchError } = await supabase
-      .from('invoices')
-      .select('*, customers(name, phone, email)')
-      .eq('id', invoiceId)
-      .single()
-
-    if (fetchError || !invoice) {
-      return new Response(
-        JSON.stringify({ error: 'Invoice not found' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+    if ('existingInvoiceId' in input && input.existingInvoiceId) {
+      return await handleBranchB(supabase, stripe, input)
     }
-
-    if (invoice.payment_status === 'paid') {
-      return new Response(
-        JSON.stringify({ error: 'Invoice already paid', alreadyPaid: true }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
-    const customerPhone = invoice.customers?.phone
-    if (!customerPhone) {
-      return new Response(
-        JSON.stringify({ error: 'Customer has no phone number on file' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
-    // Create a Stripe Checkout Session (hosted payment page - no frontend needed)
-    const amount = Math.round(Number(invoice.total) * 100)
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
-      line_items: [
-        {
-          price_data: {
-            currency: 'usd',
-            product_data: {
-              name: `Aaron's Lawn Care — ${invoice.invoice_number}`,
-              description: invoice.notes || 'Lawn care service',
-            },
-            unit_amount: amount,
-          },
-          quantity: 1,
-        },
-      ],
-      mode: 'payment',
-      metadata: {
-        invoiceId: invoice.id,
-        invoiceNumber: invoice.invoice_number,
-      },
-      success_url: `${Deno.env.get('APP_URL') || 'https://aaronslawncare502.com'}/pay/success?invoice=${invoice.invoice_number}`,
-      cancel_url: `${Deno.env.get('APP_URL') || 'https://aaronslawncare502.com'}/pay/cancelled`,
-    })
-
-    // Store the checkout session URL on the invoice
-    await supabase
-      .from('invoices')
-      .update({
-        stripe_checkout_url: session.url,
-        stripe_checkout_session_id: session.id,
-      })
-      .eq('id', invoiceId)
-
-    // Send SMS via Twilio
-    const twilioSid = Deno.env.get('TWILIO_ACCOUNT_SID')
-    const twilioAuth = Deno.env.get('TWILIO_AUTH_TOKEN')
-    const twilioPhone = Deno.env.get('TWILIO_PHONE_NUMBER')
-
-    if (!twilioSid || !twilioAuth || !twilioPhone) {
-      // Twilio not configured — return the URL but skip SMS
-      return new Response(
-        JSON.stringify({
-          success: true,
-          paymentUrl: session.url,
-          smsSent: false,
-          reason: 'Twilio not configured',
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
-    // Format phone to E.164 (strip non-digits, add +1 if needed)
-    let phone = customerPhone.replace(/\D/g, '')
-    if (phone.length === 10) phone = '1' + phone
-    if (!phone.startsWith('+')) phone = '+' + phone
-
-    const totalFormatted = Number(invoice.total).toFixed(2)
-    const message = `Aaron's Lawn Care\n\nInvoice ${invoice.invoice_number}\nAmount: $${totalFormatted}\n\nPay securely here:\n${session.url}\n\nThank you for your business!`
-
-    // Generate a signed URL for the job photo if provided
-    let photoUrl: string | null = null
-    if (photoPath) {
-      const { data: signedData } = await supabase.storage
-        .from('job-photos')
-        .createSignedUrl(photoPath, 7200) // 2 hour expiry
-      if (signedData?.signedUrl) {
-        photoUrl = signedData.signedUrl
-      }
-    }
-
-    const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${twilioSid}/Messages.json`
-    const twilioBody = new URLSearchParams({
-      To: phone,
-      From: twilioPhone,
-      Body: message,
-    })
-    // Attach photo as MMS if available
-    if (photoUrl) {
-      twilioBody.append('MediaUrl', photoUrl)
-    }
-
-    const twilioResp = await fetch(twilioUrl, {
-      method: 'POST',
-      headers: {
-        'Authorization': 'Basic ' + btoa(`${twilioSid}:${twilioAuth}`),
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: twilioBody.toString(),
-    })
-
-    const twilioResult = await twilioResp.json()
-
-    if (!twilioResp.ok) {
-      console.error('Twilio error:', twilioResult)
-      return new Response(
-        JSON.stringify({
-          success: true,
-          paymentUrl: session.url,
-          smsSent: false,
-          reason: twilioResult.message || 'Twilio send failed',
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
-    // Record that SMS was sent
-    await supabase
-      .from('invoices')
-      .update({ sms_sent_at: new Date().toISOString() })
-      .eq('id', invoiceId)
-
     return new Response(
-      JSON.stringify({
-        success: true,
-        paymentUrl: session.url,
-        smsSent: true,
-        messageSid: twilioResult.sid,
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ error: 'Invalid input: expected {invoiceId, jobData} or {existingInvoiceId}' }),
+      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (err) {
     console.error('send-invoice-sms error:', err)
     return new Response(
-      JSON.stringify({ error: err.message }),
+      JSON.stringify({ error: err instanceof Error ? err.message : String(err) }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
 })
+
+async function buildLineItemDescription(
+  baseDescription: string,
+  supabase: SupabaseClient,
+  photoPath?: string
+): Promise<{ itemDescription: string; footerText?: string }> {
+  if (!photoPath) return { itemDescription: baseDescription }
+
+  const { data: signed } = await supabase.storage
+    .from('job-photos')
+    .createSignedUrl(photoPath, 7_776_000) // 90 days
+  const photoUrl = signed?.signedUrl
+  if (!photoUrl) return { itemDescription: baseDescription }
+
+  const combined = `${baseDescription} — After photo: ${photoUrl}`
+  if (combined.length <= 500) {
+    return { itemDescription: combined }
+  }
+  const footerCandidate = `After photo: ${photoUrl}`
+  if (footerCandidate.length <= 500) {
+    return { itemDescription: baseDescription, footerText: footerCandidate }
+  }
+  // Either too long — silently skip the photo link.
+  return { itemDescription: baseDescription }
+}
+
+async function handleBranchA(
+  supabase: SupabaseClient,
+  stripe: Stripe,
+  input: BranchAInput
+): Promise<Response> {
+  const { invoiceId, jobData, photoPath } = input
+  const {
+    customer_id,
+    job_id,
+    service_type,
+    amount,
+    notes,
+    due_days = 7,
+  } = jobData
+
+  const stripeCustomerId = await ensureStripeCustomer(supabase, stripe, customer_id)
+
+  const baseDescription = getServiceLabels(service_type) || 'Lawn care service'
+  const { itemDescription, footerText } = await buildLineItemDescription(
+    baseDescription,
+    supabase,
+    photoPath
+  )
+
+  await stripe.invoiceItems.create({
+    customer: stripeCustomerId,
+    amount: Math.round(amount * 100),
+    currency: 'usd',
+    description: itemDescription,
+  })
+
+  const createdInvoice = await stripe.invoices.create(
+    {
+      customer: stripeCustomerId,
+      collection_method: 'send_invoice',
+      days_until_due: due_days,
+      auto_advance: false, // Decision 20: suppress Stripe dunning
+      metadata: { app_invoice_id: invoiceId },
+      ...(footerText ? { footer: footerText } : {}),
+    },
+    { idempotencyKey: invoiceId }
+  )
+
+  const finalized = await stripe.invoices.finalizeInvoice(createdInvoice.id!)
+
+  // Build app invoice row. Due date derived from due_days.
+  const today = new Date()
+  const dueDate = new Date()
+  dueDate.setDate(dueDate.getDate() + due_days)
+
+  const invoiceNumber = await getNextInvoiceNumber(supabase)
+
+  const { error: insertError } = await supabase.from('invoices').insert({
+    id: invoiceId,
+    customer_id,
+    job_id: job_id ?? null,
+    invoice_number: invoiceNumber,
+    invoice_date: today.toISOString().split('T')[0],
+    due_date: dueDate.toISOString().split('T')[0],
+    subtotal: amount,
+    tax: 0,
+    total: amount,
+    payment_status: 'unpaid',
+    notes: notes ?? null,
+    stripe_invoice_id: finalized.id,
+    stripe_invoice_url: finalized.hosted_invoice_url,
+  })
+  if (insertError) throw insertError
+
+  return new Response(
+    JSON.stringify({
+      success: true,
+      invoiceId,
+      stripe_invoice_id: finalized.id,
+      hosted_invoice_url: finalized.hosted_invoice_url,
+    }),
+    { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+  )
+}
+
+async function handleBranchB(
+  supabase: SupabaseClient,
+  stripe: Stripe,
+  input: BranchBInput
+): Promise<Response> {
+  const { existingInvoiceId } = input
+
+  const { data: invoice, error: fetchError } = await supabase
+    .from('invoices')
+    .select(
+      'id, customer_id, job_id, subtotal, total, notes, payment_status, stripe_invoice_id, stripe_invoice_url, jobs(service_type)'
+    )
+    .eq('id', existingInvoiceId)
+    .single()
+
+  if (fetchError || !invoice) {
+    return new Response(
+      JSON.stringify({ error: 'Invoice not found' }),
+      { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
+  }
+
+  if (invoice.payment_status === 'paid') {
+    return new Response(
+      JSON.stringify({ error: 'Invoice already paid', alreadyPaid: true }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
+  }
+
+  // Fast path: Stripe Invoice already exists for this row — return it unchanged.
+  if (invoice.stripe_invoice_id && invoice.stripe_invoice_url) {
+    return new Response(
+      JSON.stringify({
+        success: true,
+        invoiceId: invoice.id,
+        stripe_invoice_id: invoice.stripe_invoice_id,
+        hosted_invoice_url: invoice.stripe_invoice_url,
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
+  }
+
+  const stripeCustomerId = await ensureStripeCustomer(supabase, stripe, invoice.customer_id)
+
+  // Resolve line item description: joined jobs.service_type > notes > generic.
+  const jobServiceType = (invoice.jobs as { service_type?: string } | null)?.service_type
+  let baseDescription: string
+  if (jobServiceType) {
+    baseDescription = getServiceLabels(jobServiceType) || 'Lawn care service'
+  } else if (invoice.notes) {
+    baseDescription = invoice.notes
+  } else {
+    baseDescription = 'Lawn care service'
+  }
+
+  const amount = Number(invoice.total)
+
+  await stripe.invoiceItems.create({
+    customer: stripeCustomerId,
+    amount: Math.round(amount * 100),
+    currency: 'usd',
+    description: baseDescription,
+  })
+
+  const createdInvoice = await stripe.invoices.create(
+    {
+      customer: stripeCustomerId,
+      collection_method: 'send_invoice',
+      days_until_due: 7,
+      auto_advance: false,
+      metadata: { app_invoice_id: invoice.id },
+    },
+    { idempotencyKey: invoice.id }
+  )
+
+  const finalized = await stripe.invoices.finalizeInvoice(createdInvoice.id!)
+
+  const { error: updateError } = await supabase
+    .from('invoices')
+    .update({
+      stripe_invoice_id: finalized.id,
+      stripe_invoice_url: finalized.hosted_invoice_url,
+    })
+    .eq('id', invoice.id)
+  if (updateError) throw updateError
+
+  return new Response(
+    JSON.stringify({
+      success: true,
+      invoiceId: invoice.id,
+      stripe_invoice_id: finalized.id,
+      hosted_invoice_url: finalized.hosted_invoice_url,
+    }),
+    { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+  )
+}

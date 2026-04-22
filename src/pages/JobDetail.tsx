@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
 import { useJob, useUpdateJob, useDeleteJob, useRescheduleJob, STATUS_OPTIONS, getServiceLabels } from '@/hooks/useJobs'
 import JobPhotos from '@/components/photos/JobPhotos'
+import PaymentMethodModal from '@/components/payments/PaymentMethodModal'
 
 export default function JobDetail() {
   const { id } = useParams()
@@ -14,6 +15,7 @@ export default function JobDetail() {
   const [noteText, setNoteText] = useState('')
   const [showReschedule, setShowReschedule] = useState(false)
   const [rescheduleDate, setRescheduleDate] = useState('')
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false)
 
   const handleStatusChange = (newStatus: string) => {
     if (!job) return
@@ -111,7 +113,7 @@ export default function JobDetail() {
           )}
           {job.status === 'in_progress' && (
             <button
-              onClick={() => handleStatusChange('completed')}
+              onClick={() => setPaymentModalOpen(true)}
               className="flex-1 bg-green-100 text-green-800 py-2 rounded-md font-medium hover:bg-green-200 transition-colors"
             >
               Complete Job
@@ -251,6 +253,15 @@ export default function JobDetail() {
 
         <JobPhotos jobId={job.id} />
       </div>
+
+      {paymentModalOpen && (
+        <PaymentMethodModal
+          isOpen={paymentModalOpen}
+          job={job}
+          onClose={() => setPaymentModalOpen(false)}
+          onComplete={() => handleStatusChange('completed')}
+        />
+      )}
     </div>
   )
 }
