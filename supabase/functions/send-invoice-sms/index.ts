@@ -60,17 +60,40 @@ async function ensureStripeCustomer(
 ): Promise<string> {
   const { data: customer, error } = await supabase
     .from('customers')
-    .select('id, name, phone, stripe_customer_id')
+    .select('id, name, phone, email, stripe_customer_id')
     .eq('id', customerId)
     .single()
   if (error || !customer) throw new Error(`Customer ${customerId} not found`)
 
-  if (customer.stripe_customer_id) return customer.stripe_customer_id
+  // Stripe's `collection_method: 'send_invoice'` REQUIRES a valid email on the
+  // Customer. Spec Decision 20 wrongly said to omit email — Stripe rejects
+  // that with "Missing email." We pass the real email when available, or a
+  // no-op placeholder on aaronslawncare.com (a domain Aaron controls, so the
+  // black-hole address can't collide with anyone else). Email delivery is
+  // still suppressed via `auto_advance: false` on the invoice and the Stripe
+  // Dashboard "Email customer invoices" / "Email invoice reminders" toggles.
+  const placeholderEmail = `no-reply+${customerId}@aaronslawncare.com`
+  const email = customer.email ?? placeholderEmail
 
-  // Decision 20: do NOT pass email, to suppress Stripe email delivery.
+  if (customer.stripe_customer_id) {
+    // A previously-created Stripe Customer may lack an email (created
+    // before this fix). Patch it so `collection_method: 'send_invoice'`
+    // doesn't reject the invoice on finalization.
+    try {
+      const existing = await stripe.customers.retrieve(customer.stripe_customer_id)
+      if (!('deleted' in existing && existing.deleted) && !existing.email) {
+        await stripe.customers.update(customer.stripe_customer_id, { email })
+      }
+    } catch (err) {
+      console.warn('Stripe Customer verify/patch failed', err)
+    }
+    return customer.stripe_customer_id
+  }
+
   const created = await stripe.customers.create({
     name: customer.name,
     phone: customer.phone,
+    email,
     metadata: { app_customer_id: customerId },
   })
 
@@ -330,7 +353,11 @@ async function handleBranchB(
       auto_advance: false,
       metadata: { app_invoice_id: invoice.id },
     },
-    { idempotencyKey: invoice.id }
+    // Branch B (resend path): use a fresh idempotency key per call, otherwise
+    // a failed first attempt caches its error for 24h and every retry replays
+    // it. Double-tap protection on this branch comes from the UI button
+    // disabled-while-pending state, not Stripe idempotency.
+    { idempotencyKey: `${invoice.id}-${Date.now()}` }
   )
 
   const finalized = await stripe.invoices.finalizeInvoice(createdInvoice.id!)
