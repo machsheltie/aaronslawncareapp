@@ -3,6 +3,9 @@ import { Link, useParams, useNavigate } from 'react-router-dom'
 import { useJob, useUpdateJob, useDeleteJob, useRescheduleJob, STATUS_OPTIONS, getServiceLabels } from '@/hooks/useJobs'
 import JobPhotos from '@/components/photos/JobPhotos'
 import PaymentMethodModal from '@/components/payments/PaymentMethodModal'
+import PaymentForm from '@/components/payments/PaymentForm'
+import type { InvoiceWithCustomer } from '@/hooks/useInvoices'
+import { useQueryClient } from '@tanstack/react-query'
 
 export default function JobDetail() {
   const { id } = useParams()
@@ -16,6 +19,8 @@ export default function JobDetail() {
   const [showReschedule, setShowReschedule] = useState(false)
   const [rescheduleDate, setRescheduleDate] = useState('')
   const [paymentModalOpen, setPaymentModalOpen] = useState(false)
+  const [cardPaymentInvoice, setCardPaymentInvoice] = useState<InvoiceWithCustomer | null>(null)
+  const queryClient = useQueryClient()
 
   const handleStatusChange = (newStatus: string) => {
     if (!job) return
@@ -259,8 +264,35 @@ export default function JobDetail() {
           isOpen={paymentModalOpen}
           job={job}
           onClose={() => setPaymentModalOpen(false)}
+          onCardNow={(invoice) => setCardPaymentInvoice(invoice)}
           onComplete={() => handleStatusChange('completed')}
         />
+      )}
+
+      {cardPaymentInvoice && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-800">
+                Payment — {cardPaymentInvoice.invoice_number}
+              </h3>
+              <button
+                onClick={() => setCardPaymentInvoice(null)}
+                className="text-gray-400 hover:text-gray-600 text-xl"
+                aria-label="Close"
+              >
+                &times;
+              </button>
+            </div>
+            <PaymentForm
+              invoice={cardPaymentInvoice}
+              onSuccess={() => {
+                setCardPaymentInvoice(null)
+                queryClient.invalidateQueries({ queryKey: ['invoices'] })
+              }}
+            />
+          </div>
+        </div>
       )}
     </div>
   )

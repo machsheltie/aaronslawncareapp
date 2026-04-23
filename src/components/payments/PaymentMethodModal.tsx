@@ -25,6 +25,7 @@ type Props = {
 type UiState =
   | { kind: 'idle' }
   | { kind: 'loading'; method: 'text' | 'cash' | 'check' | 'card' }
+  | { kind: 'text_ready'; smsUri: string; hostedUrl: string; copied: boolean }
   | { kind: 'success' }
   | { kind: 'error'; message: string }
 
@@ -106,19 +107,40 @@ export default function PaymentMethodModal({
       const body = `Hi ${firstName}, your invoice from Aaron's Lawn Care is ready: ${result.hosted_invoice_url}`
       const smsUri = `sms:${normalizeToE164(phone)}?body=${encodeURIComponent(body)}`
 
-      // Fire the sms: URI synchronously after the mutation resolves — no
-      // setTimeout before this, or iOS loses the user-gesture context and
-      // silently blocks the navigation. UI cleanup runs after.
-      launchSmsUri(smsUri)
-      onComplete()
-      onClose()
-      setState({ kind: 'idle' })
+      // Stop here — do NOT auto-launch sms: or tear down the modal. iOS
+      // Safari/PWA regularly blocks sms: navigation when the initiating
+      // gesture was consumed by awaits above. Hand the user an explicit
+      // "Open Messages" button that fires the URI from a fresh tap.
+      setState({ kind: 'text_ready', smsUri, hostedUrl: result.hosted_invoice_url, copied: false })
     } catch (err) {
       setState({
         kind: 'error',
         message: err instanceof Error ? err.message : 'Failed to create invoice',
       })
     }
+  }
+
+  const handleOpenMessages = () => {
+    if (state.kind !== 'text_ready') return
+    launchSmsUri(state.smsUri)
+  }
+
+  const handleCopyLink = async () => {
+    if (state.kind !== 'text_ready') return
+    try {
+      await navigator.clipboard.writeText(state.hostedUrl)
+      setState({ ...state, copied: true })
+    } catch {
+      // Clipboard API unavailable (insecure context, older browser) — fall
+      // back to a visible URL the user can long-press to copy manually.
+      setState({ ...state, copied: false })
+    }
+  }
+
+  const handleFinishText = () => {
+    onComplete()
+    onClose()
+    setState({ kind: 'idle' })
   }
 
   const handleCashOrCheck = async (method: 'cash' | 'check') => {
@@ -173,6 +195,61 @@ export default function PaymentMethodModal({
   const loadingCash = state.kind === 'loading' && state.method === 'cash'
   const loadingCheck = state.kind === 'loading' && state.method === 'check'
   const loadingCard = state.kind === 'loading' && state.method === 'card'
+
+  if (state.kind === 'text_ready') {
+    return (
+      <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+        <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-800">
+              Invoice ready to text
+            </h3>
+          </div>
+
+          <p className="text-sm text-gray-600 mb-3">
+            Invoice created for <span className="font-medium">{customerName}</span>.
+            Tap <span className="font-medium">Open Messages</span> to launch your texting app with the link pre-filled.
+          </p>
+
+          <button
+            type="button"
+            onClick={handleOpenMessages}
+            className="w-full bg-brand-green text-white py-4 rounded-md font-semibold text-base hover:bg-brand-accent transition-colors mb-3"
+          >
+            📱 Open Messages
+          </button>
+
+          <div className="flex gap-2 mb-3">
+            <button
+              type="button"
+              onClick={handleCopyLink}
+              className="flex-1 border-2 border-gray-200 text-gray-700 py-2 rounded-md text-sm font-medium hover:bg-gray-50 transition-colors"
+            >
+              {state.copied ? '✓ Copied' : 'Copy Link'}
+            </button>
+            <a
+              href={state.hostedUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 border-2 border-gray-200 text-gray-700 py-2 rounded-md text-sm font-medium hover:bg-gray-50 transition-colors text-center"
+            >
+              Preview
+            </a>
+          </div>
+
+          <p className="text-xs text-gray-500 break-all mb-4 select-all">{state.hostedUrl}</p>
+
+          <button
+            type="button"
+            onClick={handleFinishText}
+            className="w-full bg-gray-100 text-gray-700 py-3 rounded-md font-medium hover:bg-gray-200 transition-colors"
+          >
+            Done — mark job completed
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">

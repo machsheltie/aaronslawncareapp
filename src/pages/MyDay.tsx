@@ -4,6 +4,9 @@ import { useCreateCustomer } from '@/hooks/useCustomers'
 import { useTodayReminders, useCompleteReminder } from '@/hooks/useReminders'
 import FollowUpForm from '@/components/FollowUpForm'
 import PaymentMethodModal from '@/components/payments/PaymentMethodModal'
+import PaymentForm from '@/components/payments/PaymentForm'
+import type { InvoiceWithCustomer } from '@/hooks/useInvoices'
+import { useQueryClient } from '@tanstack/react-query'
 import { useGenerateUpcomingJobs } from '@/hooks/useRecurringSchedules'
 import { useSkipWeek } from '@/hooks/useRecurringSchedules'
 import { geocodeAddress, optimizeRoute, openInMapsApp } from '@/lib/routeOptimizer'
@@ -46,8 +49,10 @@ export default function MyDay() {
   const [totalMiles, setTotalMiles] = useState<number | null>(null)
   const [optimizing, setOptimizing] = useState(false)
   const [photoFile, setPhotoFile] = useState<File | null>(null)
+  const [cardPaymentInvoice, setCardPaymentInvoice] = useState<InvoiceWithCustomer | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const hasGenerated = useRef(false)
+  const queryClient = useQueryClient()
 
   // Auto-generate upcoming jobs on load
   useEffect(() => {
@@ -584,6 +589,7 @@ export default function MyDay() {
           job={paymentMethodJob}
           photoFile={workflow.photoFile}
           onClose={() => setWorkflow({ step: 'photo_prompt', jobId: workflow.jobId })}
+          onCardNow={(invoice) => setCardPaymentInvoice(invoice)}
           onComplete={() => {
             const jobId = workflow.jobId
             updateJob.mutate(
@@ -598,6 +604,33 @@ export default function MyDay() {
             )
           }}
         />
+      )}
+
+      {/* On-site Card Payment Modal — opens after Card Now creates invoice */}
+      {cardPaymentInvoice && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-800">
+                Payment — {cardPaymentInvoice.invoice_number}
+              </h3>
+              <button
+                onClick={() => setCardPaymentInvoice(null)}
+                className="text-gray-400 hover:text-gray-600 text-xl"
+                aria-label="Close"
+              >
+                &times;
+              </button>
+            </div>
+            <PaymentForm
+              invoice={cardPaymentInvoice}
+              onSuccess={() => {
+                setCardPaymentInvoice(null)
+                queryClient.invalidateQueries({ queryKey: ['invoices'] })
+              }}
+            />
+          </div>
+        </div>
       )}
 
       {/* Job list */}
