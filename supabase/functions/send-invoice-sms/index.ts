@@ -225,13 +225,11 @@ async function handleBranchA(
     photoPath
   )
 
-  await stripe.invoiceItems.create({
-    customer: stripeCustomerId,
-    amount: Math.round(amount * 100),
-    currency: 'usd',
-    description: itemDescription,
-  })
-
+  // Create the invoice FIRST (empty draft), then attach line items to it
+  // explicitly via the `invoice` param on invoiceItems.create. Stripe no
+  // longer auto-pulls pending customer invoice items into manual (non-
+  // subscription) invoices, so we can't rely on create-item-then-create-
+  // invoice — it produces a $0 invoice with the item orphaned.
   const createdInvoice = await stripe.invoices.create(
     {
       customer: stripeCustomerId,
@@ -243,6 +241,14 @@ async function handleBranchA(
     },
     { idempotencyKey: invoiceId }
   )
+
+  await stripe.invoiceItems.create({
+    customer: stripeCustomerId,
+    invoice: createdInvoice.id!,
+    amount: Math.round(amount * 100),
+    currency: 'usd',
+    description: itemDescription,
+  })
 
   const finalized = await stripe.invoices.finalizeInvoice(createdInvoice.id!)
 
@@ -338,13 +344,6 @@ async function handleBranchB(
 
   const amount = Number(invoice.total)
 
-  await stripe.invoiceItems.create({
-    customer: stripeCustomerId,
-    amount: Math.round(amount * 100),
-    currency: 'usd',
-    description: baseDescription,
-  })
-
   const createdInvoice = await stripe.invoices.create(
     {
       customer: stripeCustomerId,
@@ -359,6 +358,14 @@ async function handleBranchB(
     // disabled-while-pending state, not Stripe idempotency.
     { idempotencyKey: `${invoice.id}-${Date.now()}` }
   )
+
+  await stripe.invoiceItems.create({
+    customer: stripeCustomerId,
+    invoice: createdInvoice.id!,
+    amount: Math.round(amount * 100),
+    currency: 'usd',
+    description: baseDescription,
+  })
 
   const finalized = await stripe.invoices.finalizeInvoice(createdInvoice.id!)
 
