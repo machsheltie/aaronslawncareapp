@@ -180,7 +180,28 @@ export function useCreateStripeInvoice() {
       const { data, error } = await supabase.functions.invoke('send-invoice-sms', {
         body: input,
       })
-      if (error) throw error
+      // When the edge function returns a non-2xx, supabase-js surfaces a
+      // FunctionsHttpError with a generic message and stashes the raw
+      // Response on `error.context`. Parse the body so the user sees the
+      // real failure (Stripe rejection, missing customer, etc.) instead of
+      // "Edge Function returned a non-2xx status code".
+      if (error) {
+        const ctx = (error as { context?: Response }).context
+        if (ctx && typeof ctx.text === 'function') {
+          try {
+            const raw = await ctx.text()
+            try {
+              const parsed = JSON.parse(raw) as { error?: string }
+              if (parsed?.error) throw new Error(parsed.error)
+            } catch {
+              if (raw) throw new Error(raw)
+            }
+          } catch (inner) {
+            if (inner instanceof Error) throw inner
+          }
+        }
+        throw error
+      }
       if (data?.error && !data?.alreadyPaid) throw new Error(data.error)
       return data as CreateStripeInvoiceResult
     },
